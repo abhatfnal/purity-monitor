@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
     print " | Getting extrema of individual files..."
     ch1.GetAllMaxima(ch1.AmpClean)
-    ch2.GetAllMaxima(ch2.AmpClean)
+    ch2.GetAllMaxima(ch2.AmpClean) 
 
     new = ch1.RemoveNoiseSingle(ch1.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
     new2 = ch2.RemoveNoiseSingle(ch2.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
