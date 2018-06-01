@@ -2,7 +2,7 @@ import numpy as np
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
 from scipy.ndimage.filters import gaussian_filter
-from plots import plot_double_waveform, plot_single_waveform, plot_single_fft
+from plots import PPltWfm, plot_single_waveform, plot_single_fft
 
 import ROOT
 ROOT.gROOT.SetBatch(True)
@@ -53,18 +53,21 @@ class WFM:
         self.Sampling = self.TScale/abs(self.Time[0]-self.Time[1])
         self.Samples = len(self.Time)
 
-    def SubtractBaseline(self):
+    def SubtractBaseline(self, state=False):
+        if(state): print " | Subtracting baseline..."
         for i in range(self.Files):
             self.BaseStd.append(np.std(self.Amp[i][:self.BaseCounts]))
             self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
             self.Amp[i] = [(x - self.Baseline[i]) for x in self.Amp[i]]
 
-    def GetAverageWfm(self):
+    def GetAverageWfm(self, state=False):
+        if(state): print " | Getting average waveform..."
         for i in range(self.Samples):
             self.MeanAmp.append(np.average([self.Amp[j][i] for j in range(len(self.Amp))]))
         _,_ = self.GetPeak(self.MeanAmp, self.Pol)
 
-    def GetAllMaxima(self, data):
+    def GetAllMaxima(self, data, state=False):
+        if(state): print " | Getting extrema of individual files..."
         for i in range(self.Files):
             if(self.Pol==1):
                 self.Max.append(max(data[i]))
@@ -73,13 +76,15 @@ class WFM:
             self.MaxT.append(self.Time[data[i].index(self.Max[i])])
             print " | ", i, self.MaxT[i], self.Max[i]
 
-    def GetAllFFT(self):
+    def GetAllFFT(self, state=False):
+        if(state): print " | Getting Fourier spectra..."
         T = 1.0 / self.Sampling
         self.TimeFFT = np.linspace(0.0, 1.0/(2.0*T), self.Samples/2)[1:self.Samples//2]
         for i in range(self.Files):
             self.AmpFFT.append(np.abs(fft(self.Amp[i])[1:self.Samples//2]).tolist())
 
-    def RemoveNoise(self,LowCut, HighCut, Order):
+    def RemoveNoise(self,LowCut, HighCut, Order, state=False):
+        if(state): print " | Removing noise..."
         for i in range(self.Files):
             self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order).tolist())
 
@@ -122,7 +127,7 @@ class WFM:
         for i in range(repeats):
             hist.Fit("f","RMEQ","");
         fit = self.exponential_func(np.asarray(self.Time), f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3))
-        plot_double_waveform(self.Time, data, fit, 'Cathode', 'Fit','Time [$\mu$s]', 'Amplitude [mV]',self.Time[0],self.Time[-1],min(data)*1.2,max(data)*1.2)
+        # PPltWfm(self.Time, data, fit, 'Cathode', 'Fit','Time [$\mu$s]', 'Amplitude [mV]',scale=1.2,xlim=self.Time[0],xlim2=self.Time[-1],ylim=min(data)*1.2,ylim2=max(data)*1.2)
         return start, fit[self.Time.index(start)]
 
     def exponential_func(self, x, a, b, c, d):
