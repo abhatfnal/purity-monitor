@@ -8,7 +8,7 @@ from plots import PPltWfm
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
 from wv_class import WFM
-from features import ProgressBar
+from features import ProgressBar, ElapsedTime
 
 usage = "usage: %prog [options] arg1 arg2"
 parser = OptionParser(usage=usage)
@@ -47,7 +47,7 @@ def DoAnalysis(ch1, ch2):
         data.GetAverageWfm(state=first)
         data.GetAllFFT(state=first)
         data.RemoveNoise(LowCut=0, HighCut=400E3, Order=12, state=first)
-        data.GetAllMaxima(data.AmpClean, state=first)
+        data.GetAllMaxima(data=data.AmpClean, state=first)
         first = False
 
 
@@ -65,18 +65,18 @@ if __name__ == '__main__':
     new3 = ch1.ShapeGaussian(np.asarray(new),sigma=15)      #gaussian convoluted signal
     new4 = ch2.ShapeGaussian(np.asarray(new2),sigma=15)     #gaussian convoluted signal
 
-    print " | Fitting exponential to decaying edge..."
-    start, amp = ch1.FitExponential(new, ch1.PeakTime, ch1.Time[-1], 2)
-    start2, amp2 = ch2.FitExponential(new2, ch2.PeakTime, ch2.Time[-1], 5)
+    start, amp = ch1.FitExponential(new, ch1.PeakTime, ch1.Time[-1500], 2, state=True)
+    start2, amp2 = ch2.FitExponential(new2, ch2.PeakTime, ch2.Time[-1000], 5, state=False)
 
     _,_ = ch1.GetPeak(new3, ch1.Pol)
     _,_ = ch2.GetPeak(new4, ch2.Pol)
 
 
-    print " | Drift Time Difference:   ", (ch2.PeakTime- ch1.PeakTime) - (start2-start)
+    print " | Drift Time Difference:   ", (ch2.PeakTime-ch1.PeakTime) - (start2-start)
     print " | Amplitude Ratio Difference:  ", abs(amp/amp2)-abs(min(new3)/max(new4))
+    print " | Time elapsed: ", time.clock() , "sec"
     print ch1.PeakTime, "\t", ch2.PeakTime, "\t", start, "\t", start2, "\t", ch1.Peak, "\t", ch2.Peak, "\t", amp, "\t", amp2
-    
+
     # PPltWfm(ch1.Time,ch1.MeanAmp,ch2.MeanAmp,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
     # PPltWfm(ch1.Time,new,new2,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
     # PPltWfm(ch1.Time,new3,new4,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)

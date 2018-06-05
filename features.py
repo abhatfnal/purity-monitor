@@ -12,3 +12,6 @@ def ProgressBar(it, counts):
         sys.stdout.flush()
     if(it==counts):
         sys.stdout.write("\n")
+
+def ElapsedTime():
+    print " | Time elapsed:          ", time.clock() , "sec"

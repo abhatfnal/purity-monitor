@@ -103,7 +103,8 @@ class WFM:
     def RemoveNoiseSingle(self, data, LowCut, HighCut, Order):
         return self.butter_bandpass_filter(data, LowCut, HighCut, self.Sampling, Order).tolist()
 
-    def FitExponential(self, data, start, end, repeats):
+    def FitExponential(self, data, start, end, repeats, state=False):
+        if(state): print " | Fitting exponential to decaying edge..."
         hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
         for i in range(len(data)):
             hist.AddBinContent(i, data[i])

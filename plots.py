@@ -15,12 +15,11 @@ def plot_single_waveform(time, data, label, xlabel, ylabel, xlim, xlim2, ylim, y
     plt.show()
 
 def PPltWfm(time, data, data2, label, label2, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1):
-    if(xlim==1):
+    if(xlim==1 and xlim2==1 and ylim==1 and ylim2==1):
         xlim = time[0]
         xlim2 = time[-1]
         ylim = min(min(data),min(data2))*scale
         ylim2 = max(max(data),max(data2))*scale
-    
     fig = plt.figure(figsize=(12,7))
     ax = fig.gca()
     ax.grid()
@@ -93,6 +92,5 @@ def plot_double_fft(time, freq, data, data2, fft, fft2, label, label2, xlabel, y
     plt.xlabel("Frequency [kHz]")
     plt.ylabel("Amplitude")
     plt.semilogy(xf[1:N//2]/1E3, 2.0/N * np.abs(yf4[1:N//2]), '-r')
-
 
     plt.show()
