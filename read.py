@@ -37,17 +37,17 @@ def ReadData(ch1, ch2, filename):
             ch2.Amp[i].append(float(columns[2])*ch2.VScale)
         wfm.close()
     file.close()
-    for data in (ch1,ch2):
-        data.GetSampling()
+    for ch in (ch1,ch2):
+        ch.GetSampling()
 
 def DoAnalysis(ch1, ch2):
     first = True
-    for data in (ch1,ch2):
-        data.SubtractBaseline(state=first)
-        data.GetAverageWfm(state=first)
-        data.GetAllFFT(state=first)
-        data.RemoveNoise(LowCut=0, HighCut=400E3, Order=12, state=first)
-        data.GetAllMaxima(data=data.AmpClean, state=first)
+    for ch in (ch1,ch2):
+        ch.SubtractBaseline(state=first)
+        ch.GetAverageWfm(state=first)
+        ch.GetAllFFT(state=first)
+        ch.RemoveNoise(LowCut=0, HighCut=400E3, Order=12, state=first)
+        ch.GetAllMaxima(data=ch.AmpClean, state=first)
         first = False
 
 
@@ -62,18 +62,21 @@ if __name__ == '__main__':
     new = ch1.RemoveNoiseSingle(ch1.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
     new2 = ch2.RemoveNoiseSingle(ch2.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
 
+    _,_ = ch1.GetPeak(new, ch1.Pol)
+    _,_ = ch2.GetPeak(new2, ch2.Pol)
+
     new3 = ch1.ShapeGaussian(np.asarray(new),sigma=15)      #gaussian convoluted signal
     new4 = ch2.ShapeGaussian(np.asarray(new2),sigma=15)     #gaussian convoluted signal
 
-    start, amp = ch1.FitExponential(new, ch1.PeakTime, ch1.Time[-1500], 2, state=True)
-    start2, amp2 = ch2.FitExponential(new2, ch2.PeakTime, ch2.Time[-1000], 5, state=False)
+    start, amp = ch1.FitExponential(new, ch1.PeakTime, ch1.Time[-2000], 2, state=True)
+    start2, amp2 = ch2.FitExponential(new2, ch2.PeakTime, ch2.Time[-2000], 7, state=False)
 
     _,_ = ch1.GetPeak(new3, ch1.Pol)
     _,_ = ch2.GetPeak(new4, ch2.Pol)
 
-
     print " | Drift Time Difference:   ", (ch2.PeakTime-ch1.PeakTime) - (start2-start)
     print " | Amplitude Ratio Difference:  ", abs(amp/amp2)-abs(min(new3)/max(new4))
+    print " | Field Ratio:  ", abs(ch2.Peak/ch1.Peak)
     print " | Time elapsed: ", time.clock() , "sec"
     print ch1.PeakTime, "\t", ch2.PeakTime, "\t", start, "\t", start2, "\t", ch1.Peak, "\t", ch2.Peak, "\t", amp, "\t", amp2
 
