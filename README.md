@@ -1,1 +1,0 @@
-# purity_monitor
