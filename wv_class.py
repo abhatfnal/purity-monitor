@@ -35,6 +35,7 @@ class WFM:
         self.VScale = self.Scale(units = VScale)
         self.TScale = self.Scale(units = TScale)
         self.label = Label
+        self.Plot = False
 
     def count(self):
         self.counter = self.counter + 1
@@ -124,7 +125,8 @@ class WFM:
         for i in range(repeats):
             hist.Fit("f","RMEQ","");
         fit = self.exponential_func(np.asarray(self.Time), f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3))
-        # PPltWfm(self.Time, data, fit, 'Cathode', 'Fit','Time [$\mu$s]', 'Amplitude [mV]',scale=1.2,xlim=self.Time[0],xlim2=self.Time[-1],ylim=min(data)*1.2,ylim2=max(data)*1.2)
+        if(self.Plot):
+            PPltWfm(self.Time, data, fit, 'Cathode', 'Fit','Time [$\mu$s]', 'Amplitude [mV]',scale=1.2,xlim=self.Time[0],xlim2=self.Time[-1],ylim=min(data)*1.2,ylim2=max(data)*1.2)
         return start, fit[self.Time.index(start)]
 
     def exponential_func(self, x, a, b, c, d):

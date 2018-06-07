@@ -12,6 +12,8 @@ from wv_class import WFM
 usage = "usage: %prog [options] arg1 arg2"
 parser = OptionParser(usage=usage)
 parser.add_option("-f", "--file", action="store", type="string", dest="filepath", help="Specify path/file to be read in.")
+parser.add_option("-p", "--plot", action="store_true", dest="plot", help="Show fit plots.")
+parser.add_option("-s", "--show", action="store_true", dest="show", help="Show waveforms.")
 (options, args) = parser.parse_args()
 
 def ReadFilesInDirectory():
@@ -47,6 +49,7 @@ def DoAnalysis(ch1, ch2):
         ch.GetAllFFT(state=first)
         ch.RemoveNoise(LowCut=0, HighCut=400E3, Order=12, state=first)
         ch.GetAllMaxima(data=ch.AmpClean, state=first)
+        if(options.plot): ch.Plot = True
         first = False
 
 
@@ -79,6 +82,7 @@ if __name__ == '__main__':
     print " | Time elapsed: ", time.clock() , "sec"
     print ch1.PeakTime, "\t", ch2.PeakTime, "\t", start, "\t", start2, "\t", ch1.Peak, "\t", ch2.Peak, "\t", amp, "\t", amp2
 
-    # PPltWfm(ch1.Time,ch1.MeanAmp,ch2.MeanAmp,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
-    # PPltWfm(ch1.Time,new,new2,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
-    # PPltWfm(ch1.Time,new3,new4,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
+    if(options.show):
+        PPltWfm(ch1.Time,ch1.MeanAmp,ch2.MeanAmp,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
+        PPltWfm(ch1.Time,new,new2,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
+        PPltWfm(ch1.Time,new3,new4,'Cathode','Anode','Time [$\mu$s]','Amplitude [mV]',scale=1.2)
