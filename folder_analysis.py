@@ -1,5 +1,5 @@
 from optparse import OptionParser
-import time, datetime, sys, os, glob, struct
+import os
 
 usage = "usage: %prog [options] arg1 arg2"
 parser = OptionParser(usage=usage)
@@ -17,7 +17,6 @@ def RunAnalysis(filename):
     file = open(filename, "r")
     for i,line in enumerate(file):
         print " | Analizing...", os.path.join(line[:-1], '')
-        # print ("python read.py -f "+options.filepath+os.path.join(line, ''))
         os.system("python read.py -f "+options.filepath+os.path.join(line[:-1], ''))
 
 if __name__ == '__main__':
