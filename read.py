@@ -25,7 +25,7 @@ def ReadFilesInDirectory():
 
 def ReadData(ch1, ch2, filename):
     file = open(filename, "r")
-    # print " | Reading in data files..."
+    print " | Reading in data files..."
     for i,line in enumerate(file):
         # ProgressBar(i+1, ch1.Files)
         wfm = open(line[:-1])
@@ -49,9 +49,8 @@ def DoAnalysis(ch1, ch2):
         ch.GetAllFFT(state=first)
         ch.RemoveNoise(LowCut=0, HighCut=400E3, Order=12, state=first)
         ch.GetAllMaxima(data=ch.AmpClean, state=first)
-        if(options.plot): ch.Plot = True
+        ch.Plot = options.plot
         first = False
-
 
 if __name__ == '__main__':
     num_files, filename = ReadFilesInDirectory()
@@ -65,7 +64,7 @@ if __name__ == '__main__':
     new2 = ch2.RemoveNoiseSingle(ch2.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
 
     _,_ = ch1.GetPeak(new, ch1.Pol)
-    _,_ = ch2.GetPeak(new2, ch2.Pol)
+    _,_ = ch2.GetPeak(new2, ch2.Pol) 
 
     new3 = ch1.ShapeGaussian(np.asarray(new),sigma=15)      #gaussian convoluted signal
     new4 = ch2.ShapeGaussian(np.asarray(new2),sigma=15)     #gaussian convoluted signal
