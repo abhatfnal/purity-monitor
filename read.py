@@ -8,7 +8,6 @@ from plots import PPltWfm
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
 from wv_class import WFM
-from features import ProgressBar, ElapsedTime
 
 usage = "usage: %prog [options] arg1 arg2"
 parser = OptionParser(usage=usage)
@@ -26,7 +25,7 @@ def ReadData(ch1, ch2, filename):
     file = open(filename, "r")
     print " | Reading in data files..."
     for i,line in enumerate(file):
-        ProgressBar(i+1, ch1.Files)
+        # ProgressBar(i+1, ch1.Files)
         wfm = open(line[:-1])
         for j,data in enumerate(wfm):
             columns = data.split()
@@ -41,7 +40,7 @@ def ReadData(ch1, ch2, filename):
         ch.GetSampling()
 
 def DoAnalysis(ch1, ch2):
-    first = True
+    first = False
     for ch in (ch1,ch2):
         ch.SubtractBaseline(state=first)
         ch.GetAverageWfm(state=first)

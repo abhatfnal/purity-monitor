@@ -40,14 +40,10 @@ class WFM:
         self.counter = self.counter + 1
 
     def Scale(self, units):
-        if(units=="n"):
-            return 1000000000.0
-        if(units=="u"):
-            return 1000000.0
-        if(units=="m"):
-            return 1000.0
-        if(units=="1"):
-            return 1.0
+        if(units=="n"): return 1000000000.0
+        if(units=="u"): return 1000000.0
+        if(units=="m"): return 1000.0
+        if(units=="1"): return 1.0
 
     def GetSampling(self):
         self.Sampling = self.TScale/abs(self.Time[0]-self.Time[1])
@@ -74,7 +70,7 @@ class WFM:
             else:
                 self.Max.append(min(data[i]))
             self.MaxT.append(self.Time[data[i].index(self.Max[i])])
-            print " | ", i, self.MaxT[i], self.Max[i]
+            # print " | ", i, self.MaxT[i], self.Max[i]
 
     def GetAllFFT(self, state=False):
         if(state): print " | Getting Fourier spectra..."
@@ -145,7 +141,6 @@ class WFM:
         for x in self.Time:
             gaussian.append(np.exp(-((x/sigma)**2)/2)*(1/np.sqrt(2*np.pi*sigma*sigma)))
         result = np.convolve(data, gaussian, mode="same")
-        # plot_single_waveform(self.Time, gaussian, 'Gaussian','Time [$\mu$s]', 'Amplitude [mV]',self.Time[4950],self.Time[5050],min(gaussian),max(gaussian)*1.5)
         return result.tolist()
 
     def GetPeak(self, data, pol):
