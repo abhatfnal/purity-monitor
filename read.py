@@ -25,7 +25,7 @@ def ReadFilesInDirectory():
 
 def ReadData(ch1, ch2, filename):
     file = open(filename, "r")
-    print " | Reading in data files..."
+    # print " | Reading in data files..."
     for i,line in enumerate(file):
         # ProgressBar(i+1, ch1.Files)
         wfm = open(line[:-1])
@@ -78,8 +78,8 @@ if __name__ == '__main__':
 
     print " | Drift Time Difference:   ", (ch2.PeakTime-ch1.PeakTime) - (start2-start)
     print " | Amplitude Ratio Difference:  ", abs(amp/amp2)-abs(min(new3)/max(new4))
-    print " | Field Ratio:  ", abs(ch2.Peak/ch1.Peak)
     print " | Time elapsed: ", time.clock() , "sec"
+    print " | Field Ratio:  ", abs(ch2.Peak/ch1.Peak)
     print ch1.PeakTime, "\t", ch2.PeakTime, "\t", start, "\t", start2, "\t", ch1.Peak, "\t", ch2.Peak, "\t", amp, "\t", amp2
 
     if(options.show):
