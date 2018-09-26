@@ -2,7 +2,7 @@ import numpy as np
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
 from scipy.ndimage.filters import gaussian_filter
-from plots import PPltWfm, plot_single_waveform, plot_single_fft
+from plots import PPltWfm, PltWfm, plot_single_fft
 
 import ROOT
 ROOT.gROOT.SetBatch(True)
@@ -59,9 +59,10 @@ class WFM:
 
     def GetAverageWfm(self, state=False):
         if(state): print " | Getting average waveform..."
-        for i in range(self.Samples):
+        for x,i in enumerate(range(self.Samples)):
             self.MeanAmp.append(np.average([self.Amp[j][i] for j in range(len(self.Amp))]))
         _,_ = self.GetPeak(self.MeanAmp, self.Pol)
+        # PltWfm(time=self.Time, data=self.MeanAmp, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]',xlim=1,xlim2=1,ylim=-10,ylim2=10)
 
     def GetAllMaxima(self, data, state=False):
         if(state): print " | Getting extrema of individual files..."
@@ -93,6 +94,7 @@ class WFM:
         return sos
 
     def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
+        print fs
         sos = self.butter_bandpass(lowcut, highcut, fs, order=order)
         y = sosfilt(sos, data)
         return y

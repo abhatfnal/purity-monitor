@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from optparse import OptionParser
 from itertools import chain
 from scipy import signal,integrate
-from plots import PPltWfm
+from plots import PPltWfm, PltWfm
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
 from wv_class import WFM
@@ -27,7 +27,9 @@ def ReadData(ch1, ch2, filename):
     file = open(filename, "r")
     print " | Reading in data files..."
     for i,line in enumerate(file):
+        # if(i==5):break
         # ProgressBar(i+1, ch1.Files)
+        # print i, line[:-1]
         wfm = open(line[:-1])
         for j,data in enumerate(wfm):
             columns = data.split()
@@ -44,10 +46,11 @@ def ReadData(ch1, ch2, filename):
 def DoAnalysis(ch1, ch2):
     first = False
     for ch in (ch1,ch2):
+        # PltWfm(time=ch.Time, data=ch.Amp[0][:], label="Signal", xlabel="Time", ylabel="Amp")
         ch.SubtractBaseline(state=first)
         ch.GetAverageWfm(state=first)
         ch.GetAllFFT(state=first)
-        ch.RemoveNoise(LowCut=0, HighCut=400E3, Order=12, state=first)
+        ch.RemoveNoise(LowCut=0.01, HighCut=100E3, Order=9, state=first)
         ch.GetAllMaxima(data=ch.AmpClean, state=first)
         ch.Plot = options.plot
         first = False
@@ -58,13 +61,31 @@ if __name__ == '__main__':
     ch2 = WFM(num_files, 1, "Anode")
 
     ReadData(ch1, ch2, filename)
+    # PltWfm(time=ch2.Time, data=ch2.Amp[0], label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]',xlim=1,xlim2=1,ylim=-10,ylim2=10)
     DoAnalysis(ch1, ch2)
+
+    filt = ch2.butter_bandpass_filter(ch2.Amp[0], 0.01, 100E3, ch2.Sampling, 12).tolist()
+    PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1,xlim2=1,ylim=-10,ylim2=10)
+    quit()
+    # filt = ch2.butter_bandpass_filter(ch2.MeanAmp, 500, 100E3, ch2.Sampling, 12).tolist()
+    # PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1,xlim2=1,ylim=-10,ylim2=10)
+    # filt = ch2.butter_bandpass_filter(ch2.MeanAmp, 1000, 100E3, ch2.Sampling, 12).tolist()
+    # PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1,xlim2=1,ylim=-10,ylim2=10)
+
+    print type(filt)
+    filt = np.asarray(filt)
+    print np.asarray(ch2.Amp[0])
+
+    data = np.column_stack((np.asarray(ch2.Time), np.asarray(ch2.Amp[0])))
+    print data
+    np.save('cathode_anode_waveforms_raw', data)
+    quit()
 
     new = ch1.RemoveNoiseSingle(ch1.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
     new2 = ch2.RemoveNoiseSingle(ch2.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
 
     _,_ = ch1.GetPeak(new, ch1.Pol)
-    _,_ = ch2.GetPeak(new2, ch2.Pol) 
+    _,_ = ch2.GetPeak(new2, ch2.Pol)
 
     new3 = ch1.ShapeGaussian(np.asarray(new),sigma=15)      #gaussian convoluted signal
     new4 = ch2.ShapeGaussian(np.asarray(new2),sigma=15)     #gaussian convoluted signal
