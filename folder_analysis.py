@@ -17,6 +17,7 @@ def ReadFilesInDirectory():
 def RunAnalysis(filename, filenumber):
     file = open(filename, "r")
     for i,line in enumerate(file):
+        print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
         print " | Analizing...", os.path.join(line[:-1], '')
         os.system("python read.py -f "+options.filepath+os.path.join(line[:-1], ''))
 

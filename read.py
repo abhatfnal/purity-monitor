@@ -55,31 +55,35 @@ def DoAnalysis(ch1, ch2):
         ch.Plot = options.plot
         first = False
 
+def SaveFileWtihNumPyArray(time, data, filename='test'):
+    data = np.column_stack((np.asarray(time), np.asarray(data)))
+    np.save(filename, data)
+
 if __name__ == '__main__':
+    #Read in files in a given directory. Filename is the file that contains the names of all the data files. num_lines is the number of such data files.
     num_files, filename = ReadFilesInDirectory()
+
+    #Initialize channel classes for each channel. Currently one channel (ch1) is the trigger and the other one (ch2) is the signal of both anode and cathode.
     ch1 = WFM(num_files, -1, "Cathode")
     ch2 = WFM(num_files, 1, "Anode")
 
+    #Get all waveforms in data files and save them in lists. The content of each waveform is saved in chX.Amp[i], with X the channel number and i the waveform number. The time is saved only once in chX.Time
     ReadData(ch1, ch2, filename)
-    # PltWfm(time=ch2.Time, data=ch2.Amp[0], label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]',xlim=1,xlim2=1,ylim=-10,ylim2=10)
+
+    #Inside here the analysis is carried out, including baseline subtraction, averaging of waveforms, getting the fourier spectrum, applying a frequency bandpass filter and finding the maxima of each waveform.
     DoAnalysis(ch1, ch2)
 
-    filt = ch2.butter_bandpass_filter(ch2.Amp[0], 0.01, 100E3, ch2.Sampling, 12).tolist()
-    PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1,xlim2=1,ylim=-10,ylim2=10)
-    quit()
+    #Apply a bandpass filter to the first waveform in ch2 with lowcut, highcut and order and then plot it.
+    filt = ch2.RemoveNoiseSingle(ch2.Amp[0], 0.01, 100E3,12)
+    # PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1,xlim2=1,ylim=-10,ylim2=10)
+
     # filt = ch2.butter_bandpass_filter(ch2.MeanAmp, 500, 100E3, ch2.Sampling, 12).tolist()
     # PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1,xlim2=1,ylim=-10,ylim2=10)
     # filt = ch2.butter_bandpass_filter(ch2.MeanAmp, 1000, 100E3, ch2.Sampling, 12).tolist()
     # PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1,xlim2=1,ylim=-10,ylim2=10)
-
-    print type(filt)
-    filt = np.asarray(filt)
-    print np.asarray(ch2.Amp[0])
-
-    data = np.column_stack((np.asarray(ch2.Time), np.asarray(ch2.Amp[0])))
-    print data
-    np.save('cathode_anode_waveforms_raw', data)
     quit()
+
+    SaveFileWtihNumPyArray(self.Time, self.Amp[0])
 
     new = ch1.RemoveNoiseSingle(ch1.MeanAmp, LowCut=0, HighCut=300E3, Order=3)
     new2 = ch2.RemoveNoiseSingle(ch2.MeanAmp, LowCut=0, HighCut=300E3, Order=3)

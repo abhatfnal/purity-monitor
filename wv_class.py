@@ -52,6 +52,7 @@ class WFM:
 
     def SubtractBaseline(self, state=False):
         if(state): print " | Subtracting baseline..."
+        self.BaseCounts = self.Samples/5
         for i in range(self.Files):
             self.BaseStd.append(np.std(self.Amp[i][:self.BaseCounts]))
             self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
@@ -94,7 +95,6 @@ class WFM:
         return sos
 
     def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
-        print fs
         sos = self.butter_bandpass(lowcut, highcut, fs, order=order)
         y = sosfilt(sos, data)
         return y

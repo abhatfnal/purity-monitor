@@ -2,7 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_single_waveform(time, data, label, xlabel, ylabel, xlim, xlim2, ylim, ylim2):
+def PltWfm(time, data, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1):
+    if(xlim==1 and xlim2==1):
+        xlim = time[0]
+        xlim2 = time[-1]
+    if(ylim==1 and ylim2==1):
+        ylim = min(data)*scale
+        ylim2 = max(data)*scale
     fig = plt.figure(figsize=(12,7))
     ax = fig.gca()
     ax.grid()
