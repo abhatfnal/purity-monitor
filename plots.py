@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def PltWfm(time, data, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1):
+def PltWfm(time, data, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
     if(xlim==1 and xlim2==1):
         xlim = time[0]
         xlim2 = time[-1]
@@ -20,12 +20,12 @@ def PltWfm(time, data, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1
     plt.legend([label])
     plt.show()
 
-def PPltWfm(time, data, data2, label, label2, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1):
+def PPltWfm(time, data, data2, label, label2, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
     if(xlim==1 and xlim2==1 and ylim==1 and ylim2==1):
         xlim = time[0]
         xlim2 = time[-1]
-        ylim = min(min(data),min(data2))*scale
-        ylim2 = max(max(data),max(data2))*scale
+        ylim = np.min(np.min(data),np.min(data2))*scale
+        ylim2 = np.max(np.max(data),np.max(data2))*scale
     fig = plt.figure(figsize=(12,7))
     ax = fig.gca()
     ax.grid()
@@ -34,9 +34,11 @@ def PPltWfm(time, data, data2, label, label2, xlabel, ylabel, scale=1.2, xlim=1,
     plt.xlim(xlim,xlim2)
     plt.ylim(ylim,ylim2)
     plt.plot(time, data)
-    plt.plot(time, data2)
+    plt.plot(time, data2, color='r', linewidth='3')
     plt.legend([label, label2])
     plt.show()
+    if(save):
+        plt.savefig("test.pdf")
 
 def plot_single_fft(time, data, data2, label, label2, xlabel, ylabel, xlim, xlim2, ylim, ylim2):
     fig = plt.figure(figsize=(12,7))
