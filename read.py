@@ -35,7 +35,7 @@ def ReadData(channels, filename):
             for k, ch in enumerate(channels):
                 if(i==0):
                     ch.Time.append(float(columns[0])*ch.TScale)
-                ch.Amp[i].append(float(columns[k+1])*ch.VScale)
+                ch.Amp[i].append(float(columns[ch.ID])*ch.VScale)
         wfm.close()
     file.close()
 
@@ -60,7 +60,8 @@ def SubtractTemplate(time, data, file, start, end, state=False):
 
 def DoAnalysis(channels):
     first = True
-    for ch in channels:
+    for ii, ch in enumerate(channels):
+        print " | Processing data in channel %d..." % (ii+1)
         # PltWfm(time=ch.Time, data=ch.Amp[0][:], label="Signal", xlabel="Time", ylabel="Amp")
         ch.SubtractBaseline(state=first)
         ch.GetAverageWfm(state=first)
@@ -68,7 +69,7 @@ def DoAnalysis(channels):
         # ch.RemoveNoise(LowCut=0, HighCut=100E3, Order=9, state=first)
         # ch.GetAllMaxima(data=ch.AmpClean, state=first)
         ch.Plot = options.plot
-        first = False
+        # first = False
 
 def FindTime(data, bin):
     return np.abs((np.asarray(data)-bin)).argmin()
@@ -82,42 +83,37 @@ if __name__ == '__main__':
     num_files, filename = ReadFilesInDirectory()
 
     #Initialize channel classes for each channel. Currently one channel (ch1) is the trigger and the other one (ch2) is the signal of both anode and cathode.
-    ch1 = WFM(num_files, -1, "Cathode")
-    ch2 = WFM(num_files, 1, "Anode")
+    ch1 = WFM(num_files, -1, "Trigger", 1)
+    ch2 = WFM(num_files, 1, "Signal", 2)
 
     #Get all waveforms in data files and save them in lists. The content of each waveform is saved in chX.Amp[i], with X the channel number and i the waveform number. The time is saved only once in chX.Time
-    ReadData([ch1, ch2], filename)
+    ReadData([ch1,ch2], filename)
 
     #Inside here the analysis is carried out, including baseline subtraction, averaging of waveforms, getting the fourier spectrum, applying a frequency bandpass filter and finding the maxima of each waveform.
-    DoAnalysis([ch2])
+    DoAnalysis([ch1, ch2])
 
+    filt = ch2.RemoveNoiseSingle(ch2.MeanAmp, 100, 5E5, 3)
 
+    print " | Extrema: ", np.min(ch2.MeanAmp), np.max(ch2.MeanAmp)
+    _,_,_,_,_ = ch2.FitFullCurve(data=ch2.MeanAmp, start=-300, end=300, repeats=5, state=True)
 
+    # anode = GetNpyData('anode.npy')
+    # anode = anode[:,1].tolist()
+    # cathode = GetNpyData('cathode.npy')
+    # cathode = cathode[:,1].tolist()
+    # PPltWfm(time=ch2.Time, data=anode, data2=cathode , label='anode', label2='cathode', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', save=False)
     # PltWfm(time=ch2.Time, data=ch2.MeanAmp, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]')
 
+    # PPltWfm(time=ch2.Time, data=ch2.MeanAmp, data2=filt , label='raw', label2='filt', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', save=False)
+    # _,_,_,_,_ = ch2.FitFullCurve(data=filt, start=-500, end=500, repeats=5, state=True)
+
     # new = SubtractTemplate(ch2.Time, ch2.MeanAmp, 'background_model_test.npy', FindTime(ch2.Time, 12), FindTime(ch2.Time, 100))
-    # PltWfm(time=ch2.Time, data=new, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]' )
+    # SaveFileWtihNumPyArray(ch2.Time, ch2.MeanAmp, 'cathode')
 
-    # SaveFileWtihNumPyArray(ch2.Time, ch2.MeanAmp, 'background_model_test')
-    # _,_,_,_,_ = ch2.FitFullCurve(data=ch2.MeanAmp, start=-500, end=1000, repeats=7, state=True)
-    # print np.min(ch2.MeanAmp)
-    _,_,_,_,_ = ch2.FitFullCurve(data=ch2.MeanAmp, start=-500, end=800, repeats=5, state=True)
-    # ch2.FitFullCurveDouble(data=ch2.MeanAmp, start=-450, end=450, repeats=5, state=True)
-
-
-    quit()
-
-    #Apply a bandpass filter to the first waveform in ch2 with lowcut, highcut and order and then plot it.
-    filt = ch2.RemoveNoiseSingle(ch2.MeanAmp, 50000, 5E6, 3)
-    PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', save=True)
-    quit()
+    # ch2.FitFullCurveDouble(data=new, start=-450, end=450, repeats=5, state=True)
     # ch2.FitFullCurve(data=filt, start=-42, end=-10, repeats=10, state=True)
-    expo = ch2.FitExponential(ch2.MeanAmp, 500, 2500, 3, state=True)
-
-    test = ch2.SubtractFunction(ch2.MeanAmp, expo, FindTime(ch2.Time, 12), FindTime(ch2.Time, 1000))
-
-    PltWfm(time=ch2.Time, data=test, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]')
-    # PltWfm(time=ch2.Time, data=filt, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]', xlim=1, xlim2=1, ylim=1, ylim2=1)
+    # expo = ch2.FitExponential(ch2.MeanAmp, 500, 2500, 3, state=True)
+    # test = ch2.SubtractFunction(ch2.MeanAmp, expo, FindTime(ch2.Time, 12), FindTime(ch2.Time, 1000))
 
 
     print " | Time elapsed: ", time.clock() , "sec"

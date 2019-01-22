@@ -24,8 +24,8 @@ def PPltWfm(time, data, data2, label, label2, xlabel, ylabel, scale=1.2, xlim=1,
     if(xlim==1 and xlim2==1 and ylim==1 and ylim2==1):
         xlim = time[0]
         xlim2 = time[-1]
-        ylim = np.min(np.min(data),np.min(data2))*scale
-        ylim2 = np.max(np.max(data),np.max(data2))*scale
+        ylim = min(min(data),min(data2))*scale
+        ylim2 = max(max(data),max(data2))*scale
     fig = plt.figure(figsize=(12,7))
     ax = fig.gca()
     ax.grid()

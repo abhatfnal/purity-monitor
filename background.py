@@ -1,10 +1,19 @@
-import time
 import os
+import sys
 
+path = '/project/fas/david_moore/zl423/PurityData/StandStatus/'
+name = '1_18_2019'
+date = '20190118'
 
-file = "$PDATA/StandStatus/1_14_2019"
-date = "20190114"
+file = path+name
+
+keep_time = os.stat(file).st_mtime
+
 while True:
-    os.system("python monitor.py -f %s -d %s" % (file, date))
-    time.sleep(60)
-    print 'next round'
+    time.sleep(30)
+    second_time = os.stat(file).st_mtime
+    if(second_time == keep_time):
+        continue
+    else:
+        os.system("python monitor.py -f %s -d %s" % (file, date))
+    keep_time = second_time

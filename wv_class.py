@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import scipy.special as spl
 from scipy.fftpack import fft
@@ -13,7 +14,7 @@ ROOT.gStyle.SetOptTitle(111);
 fac = ROOT.TMath.Factorial
 
 class WFM:
-    def __init__(self, Files, Pol, Label, VScale = "m", TScale = "u"):
+    def __init__(self, Files, Pol, Label, ID, VScale = "m", TScale = "u"):
         self.counter = 0
         self.Files = Files
         self.Pol = Pol
@@ -37,6 +38,7 @@ class WFM:
         self.TScale = self.Scale(units = TScale)
         self.label = Label
         self.Plot = False
+        self.ID = ID
 
     def count(self):
         self.counter = self.counter + 1
@@ -179,46 +181,55 @@ class WFM:
         for i in range(len(data)):
             hist.AddBinContent(i, data[i])
         hist.Draw()
+
+
         c1.Update()
         f = ROOT.TF1("f", "([3]/2)*exp(0.5*([1]/[2])^2 - (x-[4])/[2]) * erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0]", start, end)
         f.SetLineColor(ROOT.kRed)
-        f.SetNpx(100000)
-    	# f.SetNumberFitPoints(100000);
+        # f.SetNpx(10000)
+    	# f.SetNumberFitPoints(10000);
         f.SetParameter(0, 0.0)
         # f.SetParLimits(0,-1, 1)
         f.SetParName(0, "Baseline")
 
         f.SetParameter(1,1)
-        # f.SetParLimits(1,0, 20)
+        f.SetParLimits(1,0, 8)
         f.SetParName(1, "Rise Time")
 
         f.SetParameter(2, 100)
-        # f.SetParLimits(2, 5, 40)
+        f.SetParLimits(2, 100, 100000)
         f.SetParName(2, "Fall Time")
 
-        f.SetParameter(3, 100.)
-        # f.SetParLimits(3, -5, 0)
+        if(np.abs(np.min(data)) > np.abs(np.max(data))):
+            f.SetParameter(3, np.min(data))
+            f.SetParLimits(3, np.min(data)*1.1, np.min(data)*0.9)
+        else:
+            f.SetParameter(3, np.max(data))
+            f.SetParLimits(3, np.max(data)*0.9, np.max(data)*1.1)
         f.SetParName(3, "Amplitude")
 
         f.SetParameter(4, 10)
-        # f.SetParLimits(4, 0, 90)
+        f.SetParLimits(4, 0, 100000)
         f.SetParName(4, "Peak time")
 
         for i in range(repeats):
-            print i
-            hist.Fit("f", "REQ", "")
+            sys.stdout.write(" | Fit repition... %d" % i)
+            sys.stdout.flush()
+            sys.stdout.write("\b")
+            hist.Fit("f", "REQM", "")
             c1.Update()
-        hist.Fit("f", "RE", "")
+        hist.Fit("f", "REM", "")
 
         f.Draw('SAME')
         c1.Update()
         c1.SaveAs("test.pdf")
-        print 'graph printed'
-        print 'press any key to continue'
+        print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
+        print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
+        print ' | Graph printed...Press any key to continue...'
         raw_input()
         # ROOT.gBenchmark.Show( 'fit1' )
-        print f.GetChisquare(), f.GetNDF(), f.GetChisquare()/f.GetNDF()
-        print f.GetParameter(0), "\t", f.GetParameter(1), "\t", f.GetParameter(2), "\t", f.GetParameter(3), "\t", f.GetParameter(4), "\t", f.GetChisquare()/f.GetNDF()
+        print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
+        print " | Fit parameters...", f.GetParameter(0), "\t", f.GetParameter(1), "\t", f.GetParameter(2), "\t", f.GetParameter(3), "\t", f.GetParameter(4), "\t", f.GetChisquare()/f.GetNDF()
         # fit = self.FuncExpGausMulti(np.asarray(self.Time), f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3), f.GetParameter(4))
         # if(self.Plot):
         #     PPltWfm(self.Time, data, fit, 'Data', 'Fit','Time [$\mu$s]', 'Amplitude [mV]', scale=1.2, xlim=self.Time[0], xlim2=self.Time[-1], ylim=min(data)*1.2, ylim2=max(data)*1.2, save=True)
