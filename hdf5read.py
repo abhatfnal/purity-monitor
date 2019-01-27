@@ -2,23 +2,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import h5py
 
-print 'hello'
-quit()
 
 def get_all(name):
-   print(name)
+    print name
 
 file = '/gpfs/loomis/project/fas/david_moore/aj487/LXeData/20190125/100Vcm_8cm_lxe_anode.h5'
-
+attr = []
 f = h5py.File(file, 'r')
-f.visit(get_all)
-
+attr.append(f.visit(get_all))
+print attr
 datasetNames = [n for n in f.keys()]
 attrNames = [n for n in f.attrs.keys()]
 default = f['Default']
 attrNames = [n for n in default.attrs.keys()]
 print attrNames
-quit()
 print f.items()
 for n in datasetNames:
     print(n)
@@ -27,10 +24,10 @@ for n in datasetNames:
 
 
 print
-waveformNames = [n for n in f['Waveforms'].keys()]
+waveformNames = [n for n in f['Default/Waveforms'].keys()]
 for n in waveformNames:
     print(n)
-    data = np.array(f['Waveforms/%s' % n])
+    data = np.array(f['Default/Waveforms/%s' % n])
     print len(data)
     print data
 

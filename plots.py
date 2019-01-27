@@ -1,6 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+def PltScatter(xvalue, yvalue, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
+    fig = plt.figure(figsize=(12,7))
+    ax = fig.gca()
+    ax.grid()
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    # plt.xlim(xlim,xlim2)
+    # plt.ylim(ylim,ylim2)
+    plt.scatter(yvalue)
+    plt.legend([label])
+    plt.show()
 
 def PltWfm(time, data, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
     if(xlim==1 and xlim2==1):
@@ -33,8 +44,8 @@ def PPltWfm(time, data, data2, label, label2, xlabel, ylabel, scale=1.2, xlim=1,
     plt.ylabel(ylabel)
     plt.xlim(xlim,xlim2)
     plt.ylim(ylim,ylim2)
-    plt.plot(time, data)
-    plt.plot(time, data2, color='r', linewidth='3')
+    plt.plot(time, data, color='b', linewidth='1')
+    plt.plot(time, data2, color='r', linewidth='1')
     plt.legend([label, label2])
     plt.show()
     if(save):

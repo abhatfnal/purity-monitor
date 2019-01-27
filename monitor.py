@@ -108,9 +108,6 @@ def PltWfm(Xe,time, data, label, xlabel, ylabel, title, ylim1=1, ylim2=1, yticks
         xlim2 = Xe.DateTime + datetime.timedelta(seconds=3600*24)
     plt.xlim(xlim1, xlim2)
 
-
-
-    # plt.show()
     plt.savefig('MonitorPlots/'+title+'.pdf', bbox_inches = 'tight', pad_inches = 0.2)
     plt.close('all')
 
@@ -167,10 +164,12 @@ if __name__ == '__main__':
     try:
         Xe = monitor(options.filename)
         key = list(Xe.File.keys())[0]
+        print key
         values = np.array(Xe.File[key])
+        print values
         Xe.RefTime, Xe.DateTime = GetDateFromInput(options.date)
-        # Xe.PlotTime = 60.0
         Xe.PlotTime = options.time
+        # Xe.PlotTime = 30.0
         Xe.GetData(values)
         PlotParameters(Xe)
     except Exception as e:

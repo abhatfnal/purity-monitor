@@ -49,7 +49,8 @@ class WFM:
         if(units=="m"): return 1000.0
         if(units=="1"): return 1.0
 
-    def GetSampling(self):
+    def GetSampling(self, state=False):
+        if(state): print " | Get sampling..."
         self.Sampling = self.TScale/abs(self.Time[0]-self.Time[1])
         self.Samples = len(self.Time)
 
@@ -200,7 +201,7 @@ class WFM:
         f.SetParLimits(2, 100, 100000)
         f.SetParName(2, "Fall Time")
 
-        if(np.abs(np.min(data)) > np.abs(np.max(data))):
+        if(self.Pol == -1):
             f.SetParameter(3, np.min(data))
             f.SetParLimits(3, np.min(data)*1.1, np.min(data)*0.9)
         else:
@@ -213,9 +214,7 @@ class WFM:
         f.SetParName(4, "Peak time")
 
         for i in range(repeats):
-            sys.stdout.write(" | Fit repition... %d" % i)
-            sys.stdout.flush()
-            sys.stdout.write("\b")
+            print (" | Fit repition... %d" % i)
             hist.Fit("f", "REQM", "")
             c1.Update()
         hist.Fit("f", "REM", "")
@@ -242,13 +241,14 @@ class WFM:
         hist = ROOT.TH1F("waveform2", "waveform2", self.Samples, self.Time[0],self.Time[-1])
         for i in range(len(data)):
             hist.AddBinContent(i, data[i])
-
+        hist.Draw()
+        c2.Update()
         # p0,p1,p2,p3,p4 = self.FitFullCurve(data, -450, 80, repeats, state=False)
         # p5,p6,p7,p8,p9 = self.FitFullCurve(data, 120, 450, repeats, state=False)
 
 
-        p0,p1,p2,p3,p4 = 0.0, 2.44765e+00, 2.95234e+01, -4.97247e+01, 1.08153e+01
-        p5,p6,p7,p8,p9 = 0.0, 4.49133e+00, 1.33205e+02, 9.92916e+00,  1.21494e+02
+        p0,p1,p2,p3,p4 = 0.0, 10.0, 100.0, 10.0, 10.0
+        p5,p6,p7,p8,p9 = 0.0, 5, 100, 50,  5
 
 
 
@@ -256,7 +256,7 @@ class WFM:
         f.SetLineColor(ROOT.kRed)
         f.SetNpx(100000)
 
-        f.FixParameter(0, p0)
+        f.SetParameter(0, p0)
         # f.SetParLimits(0,-1, 1)
         f.SetParName(0, "Baseline")
 
@@ -268,19 +268,23 @@ class WFM:
         # f.SetParLimits(2, 5, 40)
         f.SetParName(2, "Fall Time")
 
-        f.SetParameter(3, p3)
-        # f.SetParLimits(3, -5, 0)
+        if(self.Pol == -1):
+            f.SetParameter(3, np.min(data))
+            f.SetParLimits(3, np.min(data)*1.1, np.min(data)*0.9)
+        else:
+            f.SetParameter(3, np.max(data))
+            f.SetParLimits(3, np.max(data)*0.9, np.max(data)*1.1)
         f.SetParName(3, "Amplitude")
 
         f.SetParameter(4, p4)
-        # f.SetParLimits(4, 0, 90)
+        f.SetParLimits(4, 0, 200)
         f.SetParName(4, "Peak time")
 
-        f.FixParameter(5, p5)
+        f.SetParameter(5, p5)
         # f.SetParLimits(0,-1, 1)
         f.SetParName(5, "Baseline 2")
 
-        f.FixParameter(6, p6)
+        f.SetParameter(6, p6)
         # f.SetParLimits(1,0, 20)
         f.SetParName(6, "Rise Time 2")
 
@@ -289,18 +293,18 @@ class WFM:
         f.SetParName(7, "Fall Time 2")
 
         f.SetParameter(8, p8)
-        # f.SetParLimits(3, -5, 0)
+        # f.SetParLimits(3, p8*0.5, p8*1.5)
         f.SetParName(8, "Amplitude 2")
 
         f.SetParameter(9, p9)
-        # f.SetParLimits(4, 0, 90)
+        # f.SetParLimits(4, 0, 10)
         f.SetParName(9, "Peak time 2")
 
         for i in range(repeats):
             print i
             hist.Fit("f", "REQ", "")
+            c2.Update()
         hist.Fit("f", "RE", "")
-        hist.Draw()
         f.Draw('SAME')
         c2.Update()
         raw_input()
