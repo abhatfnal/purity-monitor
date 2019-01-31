@@ -14,10 +14,12 @@ ROOT.gStyle.SetOptTitle(111);
 fac = ROOT.TMath.Factorial
 
 class WFM:
-    def __init__(self, Files, Pol, Label, ID, VScale = "m", TScale = "u"):
-        self.counter = 0
+    def __init__(self, Files, Directory, ID, VScale = "m", TScale = "u"):
+        self.Directory = Directory
+        self.ID = ID
         self.Files = Files
-        self.Pol = Pol
+        self.counter = 0
+        self.Pol = 1
         self.Samples = 0
         self.Sampling = 0
         self.BaseCounts = 2500
@@ -36,9 +38,8 @@ class WFM:
         self.TimeFFT = []
         self.VScale = self.Scale(units = VScale)
         self.TScale = self.Scale(units = TScale)
-        self.label = Label
+        self.Label = self.GetChannelName()
         self.Plot = False
-        self.ID = ID
 
     def count(self):
         self.counter = self.counter + 1
@@ -49,6 +50,36 @@ class WFM:
         if(units=="m"): return 1000.0
         if(units=="1"): return 1.0
 
+    def GetChannelName(self):
+        if(self.ID == 2):
+            if 'cathode_' in self.Directory:
+                label = 'Cathode'
+            if 'anode_' in self.Directory:
+                label = 'Anode'
+            if 'anodegrid_' in self.Directory:
+                label = 'Anode Grid'
+            if 'cathodegrid_' in self.Directory:
+                label = 'Cathode Grid'
+            if 'noise_' in self.Directory:
+                label = 'Noise'
+        else:
+            label = 'Trigger'
+        return label
+
+    def FindTimeBin(self, bin):
+        return np.abs((np.asarray(self.Time)-bin)).argmin()
+
+    def SetPolarity(self):
+        if self.Label == 'Cathode':
+            self.Pol = -1
+            print " | This is a cathode signal..."
+        if self.Label == 'Cathode Grid':
+            self.Pol = 1
+            print " | This is not a cathode signal..."
+        if self.Label == 'Anode':
+            self.Pol = +1
+            print " | This is an anode signal..."
+
     def GetSampling(self, state=False):
         if(state): print " | Get sampling..."
         self.Sampling = self.TScale/abs(self.Time[0]-self.Time[1])
@@ -56,7 +87,8 @@ class WFM:
 
     def SubtractBaseline(self, state=False):
         if(state): print " | Subtracting baseline..."
-        self.BaseCounts = self.Samples/10
+        # self.BaseCounts = self.Samples/10
+        self.BaseCounts = self.FindTimeBin(-10)
         for i in range(self.Files):
             self.BaseStd.append(np.std(self.Amp[i][:self.BaseCounts]))
             self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
@@ -72,10 +104,9 @@ class WFM:
 
     def GetAverageWfm(self, state=False):
         if(state): print " | Getting average waveform..."
-        for x,i in enumerate(range(self.Samples)):
-            self.MeanAmp.append(np.average([self.Amp[j][i] for j in range(len(self.Amp))]))
-        _,_ = self.GetPeak(self.MeanAmp, self.Pol)
-        # PltWfm(time=self.Time, data=self.MeanAmp, label='Signal', xlabel='Time [$\mu$s]', ylabel='Amplitude [mV]',xlim=1,xlim2=1,ylim=-10,ylim2=10)
+        self.MeanAmp = np.mean(self.Amp, axis=0)
+        # for x,i in enumerate(range(self.Samples)):
+        #     self.MeanAmp.append(np.average([self.Amp[j][i] for j in range(len(self.Amp))]))
 
     def GetAllMaxima(self, data, state=False):
         if(state): print " | Getting extrema of individual files..."
@@ -85,7 +116,6 @@ class WFM:
             else:
                 self.Max.append(min(data[i]))
             self.MaxT.append(self.Time[data[i].index(self.Max[i])])
-            # print " | ", i, self.MaxT[i], self.Max[i]
 
     def GetAllFFT(self, state=False):
         if(state): print " | Getting Fourier spectra..."
@@ -159,81 +189,65 @@ class WFM:
         result = np.convolve(data, gaussian, mode="same")
         return result.tolist()
 
-    def GetPeak(self, data, pol):
-        if(pol==1):
+    def GetPeak(self, data):
+        if(self.Pol==1):
             self.Peak = max(data)
         else:
             self.Peak = min(data)
         self.PeakTime = self.Time[data.index(self.Peak)]
         return self.Peak, self.PeakTime
 
-    def GetPeakTime(self, data, pol):
-        if(pol==1):
-            self.Peak = max(data)
+    def GetFitAmp(self, data, num):
+        if(self.Pol == -1):
+            amp = np.min(data)
+            low = np.min(data)*1.2
+            high = np.min(data)*0.8
         else:
-            self.Peak = min(data)
-        self.PeakTime = self.Time[data.index(self.Peak)]
-        return self.PeakTime
+            amp = np.max(data)
+            low = np.max(data)*0.8
+            high = np.max(data)*1.2
+        if(num==0):
+            return amp
+        if(num==1):
+            return low
+        if(num==2):
+            return high
 
     def FitFullCurve(self, data, start, end, repeats, state=False):
         if(state): print " | Fitting function to total curve..."
-        c1 = ROOT.TCanvas( 'c1', 'The Fit Canvas', 200, 10, 700, 500 )
         hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
         for i in range(len(data)):
             hist.AddBinContent(i, data[i])
-        hist.Draw()
-
-
-        c1.Update()
         f = ROOT.TF1("f", "([3]/2)*exp(0.5*([1]/[2])^2 - (x-[4])/[2]) * erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0]", start, end)
         f.SetLineColor(ROOT.kRed)
-        # f.SetNpx(10000)
-    	# f.SetNumberFitPoints(10000);
-        f.SetParameter(0, 0.0)
-        # f.SetParLimits(0,-1, 1)
-        f.SetParName(0, "Baseline")
+        f.SetNpx(10000)
+    	f.SetNumberFitPoints(10000);
 
-        f.SetParameter(1,1)
-        f.SetParLimits(1,0, 8)
-        f.SetParName(1, "Rise Time")
+        ParNames = ['Baseline', 'Rise Time', 'Fall Time', 'Amplitude', 'Peak Time']
+        ParValues = [0.0, 1.0, 100.0, self.GetFitAmp(data,0), 10.0]
+        ParLow = [-1, 0, 100.0, self.GetFitAmp(data,1), 0]
+        ParHigh = [1, 15, 100000.0, self.GetFitAmp(data,2), 1000]
 
-        f.SetParameter(2, 100)
-        f.SetParLimits(2, 100, 100000)
-        f.SetParName(2, "Fall Time")
+        for i in range(5):
+            f.SetParameter(i, ParValues[i])
+            f.SetParLimits(i, ParLow[i], ParHigh[i])
+            f.SetParName(i, ParNames[i])
 
-        if(self.Pol == -1):
-            f.SetParameter(3, np.min(data))
-            f.SetParLimits(3, np.min(data)*1.1, np.min(data)*0.9)
-        else:
-            f.SetParameter(3, np.max(data))
-            f.SetParLimits(3, np.max(data)*0.9, np.max(data)*1.1)
-        f.SetParName(3, "Amplitude")
-
-        f.SetParameter(4, 10)
-        f.SetParLimits(4, 0, 100000)
-        f.SetParName(4, "Peak time")
-
-        for i in range(repeats):
+        for i in range(repeats-1):
             print (" | Fit repition... %d" % i)
             hist.Fit("f", "REQM", "")
-            c1.Update()
         hist.Fit("f", "REM", "")
 
-        f.Draw('SAME')
-        c1.Update()
-        c1.SaveAs("test.pdf")
+        FitParameters = []
         print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
         print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
+        print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
+        for i in range(5):
+            print " | Fit parameters...", ParNames[i], f.GetParameter(i)
+            FitParameters.append(f.GetParameter(i))
         print ' | Graph printed...Press any key to continue...'
         raw_input()
-        # ROOT.gBenchmark.Show( 'fit1' )
-        print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
-        print " | Fit parameters...", f.GetParameter(0), "\t", f.GetParameter(1), "\t", f.GetParameter(2), "\t", f.GetParameter(3), "\t", f.GetParameter(4), "\t", f.GetChisquare()/f.GetNDF()
-        # fit = self.FuncExpGausMulti(np.asarray(self.Time), f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3), f.GetParameter(4))
-        # if(self.Plot):
-        #     PPltWfm(self.Time, data, fit, 'Data', 'Fit','Time [$\mu$s]', 'Amplitude [mV]', scale=1.2, xlim=self.Time[0], xlim2=self.Time[-1], ylim=min(data)*1.2, ylim2=max(data)*1.2, save=True)
-
-        return f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3), f.GetParameter(4)
+        return FitParameters
 
     def FitFullCurveDouble(self, data, start, end, repeats, state=False):
         if(state): print " | Fitting function to total curve..."
