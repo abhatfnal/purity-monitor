@@ -14,10 +14,11 @@ ROOT.gStyle.SetOptTitle(111);
 fac = ROOT.TMath.Factorial
 
 class WFM:
-    def __init__(self, Files, Directory, ID, VScale = "m", TScale = "u"):
+    def __init__(self, Directory, ID, VScale = "m", TScale = "u"):
         self.Directory = Directory
         self.ID = ID
-        self.Files = Files
+        self.ChName = 'ch%d' % self.ID
+        self.Files = 0
         self.counter = 0
         self.Pol = 1
         self.Samples = 0
@@ -30,6 +31,7 @@ class WFM:
         self.Peak = []
         self.PeakTime = []
         self.Time = []
+        self.Trigger = []
         self.Max = []
         self.Int = []
         self.MaxT = []
@@ -40,6 +42,7 @@ class WFM:
         self.TScale = self.Scale(units = TScale)
         self.Label = self.GetChannelName()
         self.Plot = False
+        self.CreateTime = []
 
     def count(self):
         self.counter = self.counter + 1
@@ -51,14 +54,15 @@ class WFM:
         if(units=="1"): return 1.0
 
     def GetChannelName(self):
+        label = ''
         if(self.ID == 2):
-            if 'cathode_' in self.Directory:
+            if 'cathode' in self.Directory:
                 label = 'Cathode'
-            if 'anode_' in self.Directory:
+            if 'anode' in self.Directory:
                 label = 'Anode'
-            if 'anodegrid_' in self.Directory:
+            if 'anodegrid' in self.Directory:
                 label = 'Anode Grid'
-            if 'cathodegrid_' in self.Directory:
+            if 'cathodegrid' in self.Directory:
                 label = 'Cathode Grid'
             if 'noise_' in self.Directory:
                 label = 'Noise'
@@ -87,8 +91,7 @@ class WFM:
 
     def SubtractBaseline(self, state=False):
         if(state): print " | Subtracting baseline..."
-        # self.BaseCounts = self.Samples/10
-        self.BaseCounts = self.FindTimeBin(-10)
+        self.BaseCounts = self.FindTimeBin(-50)
         for i in range(self.Files):
             self.BaseStd.append(np.std(self.Amp[i][:self.BaseCounts]))
             self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
@@ -105,8 +108,6 @@ class WFM:
     def GetAverageWfm(self, state=False):
         if(state): print " | Getting average waveform..."
         self.MeanAmp = np.mean(self.Amp, axis=0)
-        # for x,i in enumerate(range(self.Samples)):
-        #     self.MeanAmp.append(np.average([self.Amp[j][i] for j in range(len(self.Amp))]))
 
     def GetAllMaxima(self, data, state=False):
         if(state): print " | Getting extrema of individual files..."
@@ -153,34 +154,20 @@ class WFM:
         f.SetLineColor(ROOT.kRed);
         f.SetNpx(100000);
 
-        f.SetParameter(0,1.0);
-        # f.SetParLimits(0,-1000,1000);
-        f.SetParName(0, "Amp");
-        f.SetParameter(1,.001);
-        # f.SetParLimits(1,-10,10);
-        f.SetParName(1, "Tau");
-        f.SetParameter(2,0);
-        # f.SetParLimits(2,-100,100);
-        f.SetParName(2, "XOff");
-        f.SetParameter(3,0);
-        # f.SetParLimits(3,-100,100);
-        f.SetParName(3, "YOff");
+        ParNames = ['Amplitude', 'Fall Time', 'X Offset', 'Y Offset']
+        ParValues = [1.0, 0.001, 0.0, 0.0]
+        ParLow = [0, 0, -10, -10]
+        ParHigh = [10000, 10000, 10, 10]
+
+        for i in range(len(ParNames)):
+            f.SetParameter(i, ParValues[i])
+            f.SetParLimits(i, ParLow[i], ParHigh[i])
+            f.SetParName(i, ParNames[i])
 
         for i in range(repeats):
             hist.Fit("f","RME","");
         fit = self.exponential_func(np.asarray(self.Time), f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3))
-        if(self.Plot):
-            PPltWfm(self.Time, data, fit, 'Cathode', 'Fit','Time [$\mu$s]', 'Amplitude [mV]',scale=1.2,xlim=self.Time[0],xlim2=self.Time[-1],ylim=min(data)*1.2,ylim2=max(data)*1.2)
         return fit
-
-    def exponential_func(self, x, a, b, c, d):
-        return a*np.exp(-b*(x-c))+d
-
-    def double_exponential_func(self, x, a, b,  d, e, g):
-        return a*np.exp(-b*(x))+d*np.exp(-e*(x))+g
-
-    def triple_exponential_func(self, x,a,b,c,d,e,f,g,h,i,j):
-        return a*np.exp(-b*(x-c))+d*np.exp(-e*(x-f))+g*np.exp(-h*(x-i))+j
 
     def ShapeGaussian(self, data, sigma):
         gaussian = []
@@ -198,14 +185,16 @@ class WFM:
         return self.Peak, self.PeakTime
 
     def GetFitAmp(self, data, num):
+        ScaleUp = 1.5
+        ScaleLow = 0.5
         if(self.Pol == -1):
             amp = np.min(data)
-            low = np.min(data)*1.2
-            high = np.min(data)*0.8
+            low = np.min(data)*ScaleUp
+            high = np.min(data)*ScaleLow
         else:
             amp = np.max(data)
-            low = np.max(data)*0.8
-            high = np.max(data)*1.2
+            low = np.max(data)*ScaleLow
+            high = np.max(data)*ScaleUp
         if(num==0):
             return amp
         if(num==1):
@@ -218,7 +207,7 @@ class WFM:
         hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
         for i in range(len(data)):
             hist.AddBinContent(i, data[i])
-        f = ROOT.TF1("f", "([3]/2)*exp(0.5*([1]/[2])^2 - (x-[4])/[2]) * erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0]", start, end)
+        f = ROOT.TF1("f", "([3]/2)*exp(0.5*([1]/[2])^2 -(x-[4])/[2])*erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0]", start, end)
         f.SetLineColor(ROOT.kRed)
         f.SetNpx(10000)
     	f.SetNumberFitPoints(10000);
@@ -228,7 +217,7 @@ class WFM:
         ParLow = [-1, 0, 100.0, self.GetFitAmp(data,1), 0]
         ParHigh = [1, 15, 100000.0, self.GetFitAmp(data,2), 1000]
 
-        for i in range(5):
+        for i in range(len(ParNames)):
             f.SetParameter(i, ParValues[i])
             f.SetParLimits(i, ParLow[i], ParHigh[i])
             f.SetParName(i, ParNames[i])
@@ -242,117 +231,58 @@ class WFM:
         print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
         print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
         print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
-        for i in range(5):
+        for i in range(len(ParNames)):
             print " | Fit parameters...", ParNames[i], f.GetParameter(i)
             FitParameters.append(f.GetParameter(i))
+
         print ' | Graph printed...Press any key to continue...'
         raw_input()
         return FitParameters
 
     def FitFullCurveDouble(self, data, start, end, repeats, state=False):
         if(state): print " | Fitting function to total curve..."
-        c2 = ROOT.TCanvas( 'c2', 'The Fit Canvas', 200, 10, 700, 500 )
         hist = ROOT.TH1F("waveform2", "waveform2", self.Samples, self.Time[0],self.Time[-1])
         for i in range(len(data)):
             hist.AddBinContent(i, data[i])
-        hist.Draw()
-        c2.Update()
-        # p0,p1,p2,p3,p4 = self.FitFullCurve(data, -450, 80, repeats, state=False)
-        # p5,p6,p7,p8,p9 = self.FitFullCurve(data, 120, 450, repeats, state=False)
 
-
-        p0,p1,p2,p3,p4 = 0.0, 10.0, 100.0, 10.0, 10.0
-        p5,p6,p7,p8,p9 = 0.0, 5, 100, 50,  5
-
-
-
-        f = ROOT.TF1("f", "[3]/2*exp(0.5*([1]/[2])^2 - (x-[4])/[2]) * erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0] + [8]/2*exp(0.5*([6]/[7])^2 - (x-[9])/[7]) * erfc(([6]/[7]-(x-[9])/[6])/sqrt(2))+[5]", start, end)
+        f = ROOT.TF1("f2", "[3]/2*exp(0.5*([1]/[2])^2 - (x-[4])/[2]) * erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0] + [8]/2*exp(0.5*([6]/[7])^2 - (x-[9])/[7]) * erfc(([6]/[7]-(x-[9])/[6])/sqrt(2))+[5]", start, end)
         f.SetLineColor(ROOT.kRed)
         f.SetNpx(100000)
 
-        f.SetParameter(0, p0)
-        # f.SetParLimits(0,-1, 1)
-        f.SetParName(0, "Baseline")
+        ParNames = ['Baseline', 'Rise Time', 'Fall Time', 'Amplitude', 'Peak Time', 'Baseline 2', 'Rise Time 2', 'Fall Time 2', 'Amplitude 2', 'Peak Time 2']
+        ParValues = [0.0, 1.0, 100.0, self.GetFitAmp(data,0), 10.0, 0.0, 1.0, 100.0, self.GetFitAmp(data,0), 10.0]
+        ParLow = [-1, 0, 100.0, self.GetFitAmp(data,1), 0, -1, 0, 100.0, self.GetFitAmp(data,1), 0]
+        ParHigh = [1, 15, 100000.0, self.GetFitAmp(data,2), 1000, 1, 15, 100000.0, self.GetFitAmp(data,2), 1000]
 
-        f.SetParameter(1, p1)
-        # f.SetParLimits(1,0, 20)
-        f.SetParName(1, "Rise Time")
+        ParValues[:5] = self.FitFullCurve(data, -100, 70, 5)
+        ParValues[5:10] = self.FitFullCurve(data, 90, 300, 5)
+        ParLow = 0.5*np.asarray(ParValues)
+        ParHigh = 1.5*np.asarray(ParValues)
+        print len(ParLow)
+        print len(ParHigh)
+        print len(ParValues)
+        print ParValues
+        print 'seperate fits done'
 
-        f.SetParameter(2, p2)
-        # f.SetParLimits(2, 5, 40)
-        f.SetParName(2, "Fall Time")
-
-        if(self.Pol == -1):
-            f.SetParameter(3, np.min(data))
-            f.SetParLimits(3, np.min(data)*1.1, np.min(data)*0.9)
-        else:
-            f.SetParameter(3, np.max(data))
-            f.SetParLimits(3, np.max(data)*0.9, np.max(data)*1.1)
-        f.SetParName(3, "Amplitude")
-
-        f.SetParameter(4, p4)
-        f.SetParLimits(4, 0, 200)
-        f.SetParName(4, "Peak time")
-
-        f.SetParameter(5, p5)
-        # f.SetParLimits(0,-1, 1)
-        f.SetParName(5, "Baseline 2")
-
-        f.SetParameter(6, p6)
-        # f.SetParLimits(1,0, 20)
-        f.SetParName(6, "Rise Time 2")
-
-        f.SetParameter(7, p7)
-        # f.SetParLimits(2, 5, 40)
-        f.SetParName(7, "Fall Time 2")
-
-        f.SetParameter(8, p8)
-        # f.SetParLimits(3, p8*0.5, p8*1.5)
-        f.SetParName(8, "Amplitude 2")
-
-        f.SetParameter(9, p9)
-        # f.SetParLimits(4, 0, 10)
-        f.SetParName(9, "Peak time 2")
-
-        for i in range(repeats):
+        for i in range(len(ParNames)):
             print i
-            hist.Fit("f", "REQ", "")
-            c2.Update()
-        hist.Fit("f", "RE", "")
-        f.Draw('SAME')
-        c2.Update()
+            f.SetParameter(i, ParValues[i])
+            f.SetParLimits(i, ParLow[i], ParHigh[i])
+            f.SetParName(i, ParNames[i])
+
+        for i in range(repeats-1):
+            print (" | Fit repition... %d" % i)
+            hist.Fit("f2", "REMQ", "")
+        hist.Fit("f2", "REM", "")
+
+        FitParameters = []
+        print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
+        print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
+        print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
+        for i in range(len(ParNames)):
+            print " | Fit parameters...", ParNames[i], f.GetParameter(i)
+            FitParameters.append(f.GetParameter(i))
+
+        print ' | Graph printed...Press any key to continue...'
         raw_input()
-        print f.GetChisquare(), f.GetNDF(), f.GetChisquare()/f.GetNDF()
-        # fit = self.FuncExpGausMulti(np.asarray(self.Time), f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3), f.GetParameter(4))
-        if(self.Plot):
-            PPltWfm(self.Time, data, fit, 'Data', 'Fit','Time [$\mu$s]', 'Amplitude [mV]', scale=1.2, xlim=self.Time[0], xlim2=self.Time[-1], ylim=min(data)*1.2, ylim2=max(data)*1.2, save=True)
-
-    def FuncExpGausMulti(self, data, p0, p1, p2, p3, p4):
-    	#This produces the function 3.5
-    	# // p0: baseline, B
-    	# // p1: gaussian sig
-    	# // p2: exponential decay constant
-    	# // p3: number of pulses
-    	# // p[4+2*i]: pulse[i] amplitude
-
-    	val = np.full((data.size),p0)
-    	time = np.asarray([x-p4 for x in data])
-    	#This is the term time = (t - mu)/tau
-    	val_tot = val + p3/2.* np.exp((p1*p1/p2/p2/2.-time)/p2)* spl.erfc((p1/p2-time/p1)/np.sqrt(2))+p0
-                #This is the function is defined in eqn 3.5
-    	return val_tot
-
-    def DoubleFuncExpGausMulti(self, data, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9):
-    	#This produces the function 3.5
-    	# // p0: baseline, B
-    	# // p1: gaussian sig
-    	# // p2: exponential decay constant
-    	# // p3: number of pulses
-    	# // p[4+2*i]: pulse[i] amplitude
-
-    	val = np.full((data.size),p0)
-    	time = np.asarray([x-p4 for x in data])
-    	#This is the term time = (t - mu)/tau
-    	val_tot = val + p3/2.* np.exp((p1*p1/p2/p2/2.-time)/p2)* spl.erfc((p1/p2-time/p1)/np.sqrt(2))+p0
-                #This is the function is defined in eqn 3.5
-    	return val_tot
+        return FitParameters
