@@ -9,7 +9,7 @@ import h5py
 import datetime
 import dropbox
 from matplotlib.dates import DateFormatter
-import upload
+import DropboxUpload
 from matplotlib.ticker import MultipleLocator
 
 startTime = datetime.datetime.now()
@@ -156,7 +156,7 @@ def PlotParameters(Xe):
         PltWfm(Xe, tt, [ldata], ['LXe Level'], xlabel='Time [hh:mm]', ylabel='Capacitance [pF]', title = 'lxe_level')
 
     print 'uploading files to dropbox'
-    upload.main()
+    DropboxUpload.main()
     print 'finished'
 
 if __name__ == '__main__':

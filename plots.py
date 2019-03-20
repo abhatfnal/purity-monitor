@@ -1,18 +1,59 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MultipleLocator
+import datetime
+from matplotlib.dates import DateFormatter
+
+def PltTime(time, data, legend, xlabel, ylabel, ylim1=1, ylim2=1, yticks=0):
+    fig = plt.figure(figsize=(12,9))
+
+    ax = fig.gca()
+
+    # ax.minorticks_on()
+    # ax.xaxis.set_major_locator(matplotlib.dates.HourLocator(interval=2))
+    # ax.xaxis.set_minor_locator(matplotlib.dates.MinuteLocator(interval=60))
+    # ax.yaxis.set_major_locator(MultipleLocator(yticks))
+    # ax.yaxis.set_minor_locator(MultipleLocator(yticks/2))
+
+    ax.grid(b=True, which='major', color='k', linestyle='-')
+    ax.grid(b=True, which='minor', color='k', linestyle=':')
+
+    plt.xlabel(xlabel, fontsize=14)
+    plt.ylabel(ylabel, fontsize=14)
+
+    plt.gcf().autofmt_xdate()
+    formatter = DateFormatter('%H:%M:%S')
+    plt.gcf().axes[0].xaxis.set_major_formatter(formatter)
+    data = [x for _,x in sorted(zip(time,data))]
+    time = sorted(time)
+    timet = [datetime.datetime.strptime(x, '%H%M%S') for x in time]
 
 
-def PltScatter(xvalue, yvalue, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
+
+
+    for yy in data:
+        plt.plot(timet, yy)
+    plt.legend(loc='upper left')
+
+
+def PltScatter(xvalue, yvalue, legend, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
     fig = plt.figure(figsize=(12,7))
     ax = fig.gca()
     ax.grid()
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
-    plt.scatter(xvalue, yvalue)
-    plt.legend([label])
+    color = ['red', 'blue']
+    print len(xvalue)
+    print len(yvalue)
+    time = [datetime.datetime.strptime(x, '%H%M%S') for x in xvalue]
+    for signal in yvalue:
+        print np.shape(xvalue), np.shape(signal)
+        plt.scatter(xvalue, signal)
+        # plt.scatter(time, signal)
+        # plt.plot_time(time,signal)
+    plt.legend(legend)
 
-def PltScatterD(xvalue, yvalue, yvalue2, label, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
+def PltScatterD(xvalue, yvalue, yvalue2, legend, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
     fig = plt.figure(figsize=(12,7))
     ax = fig.gca()
     ax.grid()
@@ -33,7 +74,7 @@ def PltWfm(time, data, legend, scale=1.5, xlim=1, xlim2=1, ylim=1, ylim2=1, save
     ax.xaxis.set_minor_locator(MultipleLocator(100))
     ax.xaxis.set_major_locator(MultipleLocator(500))
     ax.yaxis.set_major_locator(MultipleLocator(10))
-    ax.yaxis.set_minor_locator(MultipleLocator(1))
+    ax.yaxis.set_minor_locator(MultipleLocator(10))
     plt.xlabel('Time [$\mu$s]')
     plt.ylabel('Amplitude [mV]')
     plt.xlim(xlim,xlim2)

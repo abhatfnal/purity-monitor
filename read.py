@@ -8,8 +8,8 @@ from scipy import signal,integrate
 from plots import *
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
-from wv_class import WFM
-from helper_classes import *
+from WaveformClass import WFM
+from HelperClasses import *
 
 usage = "usage: %prog [options] arg1 arg2"
 parser = OptionParser(usage=usage)
@@ -56,6 +56,7 @@ def ImportDataFromHDF5(file, channels):
         print " | Number of files:\t", ch.Files
         for key in GroupKeys:
             ch.Amp.append(np.array(Group.get(key)).flatten() * ch.VScale)
+            ch.TimeStamp.append(Group.get(key).attrs["TimeStamp"])
 
 def ReadData(channels, files):
     print " | Reading in data files..."
@@ -90,12 +91,12 @@ def DoAnalysis(channels):
     for ii, ch in enumerate(channels):
         print " | Processing data in channel %d..." % (ch.ID)
         ch.GetSampling()
-        ch.SetPolarity()
+        # ch.SetPolarity()
         ch.SubtractBaseline(state=first)
         ch.GetAverageWfm(state=first)
         # ch.GetAllFFT(state=first)
-        # ch.RemoveNoise(LowCut=0, HighCut=100E3, Order=9, state=first)
-        # ch.GetAllMaxima(data=ch.Amp, state=first)
+        ch.RemoveNoise(LowCut=0, HighCut=100E3, Order=3, state=first)
+        ch.GetAllMaxima(data=ch.AmpClean, state=first)
         print " | Extremum: ", ch.GetPeak(ch.MeanAmp.tolist())
 
 def SaveFileWtihNumPyArray(time, data, filename='test'):
@@ -106,6 +107,8 @@ if __name__ == '__main__':
     #Initialize channel classes for each channel. Currently one channel (ch1) is the trigger and the other one (ch2) is the signal of both anode and cathode.
     ch1 = WFM(options.filepath, 1)
     ch2 = WFM(options.filepath, 2)
+    ch1.Pol = 1
+    ch2.Pol = -1
 
     if(options.txt):
         #Read in files in a given directory. Filename is the file that contains the names of all the data files. num_lines is the number of such data files.
@@ -121,17 +124,35 @@ if __name__ == '__main__':
             ReadData([ch3], files2)
     else:
         #New Method of getting data from HDF5 files.
-        ImportDataFromHDF5(options.filepath, [ch2])
+        ImportDataFromHDF5(options.filepath, [ch1,ch2])
+
+    # print len(ch2.Time)
+    # print len(ch1.Amp[0])
+    # print len(ch2.Amp[0])
+
+    PltWfm(time=ch2.Time, data=[ch1.Amp[0], ch2.Amp[0]], legend=['Anode', 'Cathode'])
 
     #Inside here the analysis is carried out, including baseline subtraction, averaging of waveforms, getting the fourier spectrum, applying a frequency bandpass filter and finding the maxima of each waveform.
     if(options.filepath2 != ""):
         DoAnalysis([ch2, ch3])
     else:
-        DoAnalysis([ch2])
+        DoAnalysis([ch1, ch2])
 
-    # PltScatter(seg3, ch2.Max, label='Cathode vs Time', xlabel='Minutes', ylabel='Amplitude [mV]')
+    PltWfm(time=ch2.Time, data=[ch1.Amp[0], ch2.Amp[0]], legend=['Anode', 'Cathode'])
+    PltWfm(time=ch2.Time, data=[ch1.AmpClean[0], ch2.AmpClean[0]], legend=['Anode', 'Cathode'])
+
+
+    print min(ch1.MeanAmp), max(ch1.MeanAmp)
+    print min(ch2.MeanAmp), max(ch2.MeanAmp)
+    ratio = [-x/y for x,y in zip(ch1.Max, ch2.Max)]
+    # PltScatter(ch1.TimeStamp, [ch1.Max, ch2.Max] , legend=['Anode', 'Cathode'], xlabel='Time %H%M%S', ylabel='Amplitude [mV]')
+    # PltScatter(ch1.TimeStamp, [ch1.Max] , legend=['Anode'], xlabel='Time %H%M%S', ylabel='Amplitude [mV]')
+    # PltScatter(ch2.TimeStamp, [ch2.Max] , legend=['Cathode'], xlabel='Time %H%M%S', ylabel='Amplitude [mV]')
+    PltScatter(ch1.TimeStamp, [ratio] , legend=['Anode/Cathode'], xlabel='Time %H%M%S', ylabel='Ratio')
+    PltTime(ch1.TimeStamp, [ratio], legend='Anode', xlabel='Minutes', ylabel='Ratio')
+    # PltTime(ch2.TimeStamp, [ch2.Max], legend='Cathode', xlabel='Minutes', ylabel='Amplitude [mV]')
     # PltScatterD(seg, ch2.Max, ch3.Max, label='Anode vs Time', xlabel='count', ylabel='Amplitude [mV]')
-    # PltWfm(time=ch2.Time, data=[ch2.Amp[0], ch2.MeanAmp], legend=['Single', 'Average'])
+    # PltWfm(time=ch2.Time, data=[ch1.MeanAmp, ch2.MeanAmp], legend=['Anode', 'Cathode'])
 
     # ch2.FitFullCurve(data=ch2.MeanAmp, start=-300, end=200, repeats=5, state=True)
     # ch2.FitFullCurveDouble(data=ch2.MeanAmp, start=-200, end=400, repeats=5, state=True)
