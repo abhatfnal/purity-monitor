@@ -1,17 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
 import time, datetime, sys, os, glob, struct, h5py
 from optparse import OptionParser
-from itertools import chain
-from scipy import signal,integrate
 from plots import *
-from scipy.fftpack import fft
-from scipy.signal import butter, lfilter, sosfilt
-from WaveformClass import WFM
+from WaveformClass import *
 from HelperClasses import *
 import TxtExtension as txt
-from scipy.signal import detrend
 
 usage = "usage: %prog [options] arg1 arg2"
 parser = OptionParser(usage=usage)
@@ -40,7 +34,7 @@ def DoAnalysis(channels):
     for ii, ch in enumerate(channels):
         print " | Processing data in channel %d..." % (ch.ID)
         ch.GetSampling()
-        ch.SetPolarity()
+        # ch.SetPolarity()
         ch.SubtractBaseline(state=first)
         ch.GetAverageWfm(state=first)
         # ch.GetAllFFT(state=first)
