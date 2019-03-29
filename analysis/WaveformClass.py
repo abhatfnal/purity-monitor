@@ -30,7 +30,6 @@ class WFM:
         self.Max = []
         self.MaxT = []
         self.AmpFFT = []
-        self.AmpClean = []
         self.TimeFFT = []
         self.VScale = self.Scale(units = VScale)
         self.TScale = self.Scale(units = TScale)
@@ -93,10 +92,11 @@ class WFM:
 
     def SubtractFunction(self, data, fit, start, end, state=False):
         if(state): print " | Subtracting baseline..."
-        DataMinusFit = [(x-y) for x,y in zip(data[start:end],fit[start:end])]
-        new = data[:start]
-        new.extend(DataMinusFit)
-        new.extend(data[end:])
+        # DataMinusFit = [(x-y) for x,y in zip(data[start:end],fit[start:end])]
+        # new = data[:start]
+        # new.extend(DataMinusFit)
+        # new.extend(data[end:])
+        new = np.subtract(data,fit, where=((self.Time > start) & (self.Time < end)))
         return new
 
     def GetAverageWfm(self, state=False):
@@ -123,8 +123,10 @@ class WFM:
 
     def RemoveNoise(self,LowCut, HighCut, Order, state=False):
         if(state): print " | Removing noise..."
+        self.AmpClean = np.empty(np.shape(self.Amp), float)
         for i in range(self.Files):
-            self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order))
+            # self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order))
+            self.AmpClean[i] = self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order)
 
     def butter_bandpass(self, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
