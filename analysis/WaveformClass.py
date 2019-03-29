@@ -1,16 +1,11 @@
-import sys
 import numpy as np
-import scipy.special as spl
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
-from scipy.ndimage.filters import gaussian_filter
-from plots import *
 import ROOT
 # ROOT.gROOT.SetBatch(True)
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kWarning;")
 ROOT.gStyle.SetOptFit(111)
 ROOT.gStyle.SetOptTitle(111);
-fac = ROOT.TMath.Factorial
 
 class WFM:
     def __init__(self, Directory, ID, VScale = "m", TScale = "u"):
@@ -33,7 +28,6 @@ class WFM:
         self.Time = []
         self.Trigger = []
         self.Max = []
-        self.Int = []
         self.MaxT = []
         self.AmpFFT = []
         self.AmpClean = []
@@ -111,13 +105,14 @@ class WFM:
 
     def GetAllMaxima(self, data, state=False):
         if(state): print " | Getting extrema of individual files..."
-        for i in range(self.Files):
-            if(self.Pol==1):
+        if(self.Pol==1):
+            for i in range(self.Files):
                 self.Max.append(np.max(data[i]))
-            else:
+                self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])])
+        else:
+            for i in range(self.Files):
                 self.Max.append(np.min(data[i]))
-            # self.MaxT.append(self.Time[data[i].index(self.Max[i])])
-            self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])])
+                self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])])
 
     def GetAllFFT(self, state=False):
         if(state): print " | Getting Fourier spectra..."
@@ -130,7 +125,6 @@ class WFM:
         if(state): print " | Removing noise..."
         for i in range(self.Files):
             self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order))
-            # print self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order)
 
     def butter_bandpass(self, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs

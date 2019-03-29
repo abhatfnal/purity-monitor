@@ -42,7 +42,7 @@ def DoAnalysis(channels):
         ch.GetAllMaxima(data=ch.AmpClean, state=first)
         print " | Extremum: ", ch.GetPeak(ch.MeanAmp.tolist())
 
-def SaveFileWtihNumPyArray(time, data, filename='test'):
+def SaveNpy(time, data, filename='test'):
     data = np.column_stack((np.asarray(time), np.asarray(data)))
     np.save(filename, data)
 
