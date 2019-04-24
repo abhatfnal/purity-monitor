@@ -3,8 +3,8 @@ import sys
 import time
 
 path = '/project/fas/david_moore/zl423/PurityData/StandStatus/'
-name = '3_19_2019'
-date = '20190319'
+name = '20190410.h5'
+date = '20190410'
 
 file = path+name
 

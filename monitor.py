@@ -4,7 +4,6 @@ import matplotlib
 matplotlib.use("PDF")
 import matplotlib.pyplot as plt
 from optparse import OptionParser
-from itertools import chain
 import h5py
 import datetime
 import dropbox
@@ -58,7 +57,7 @@ class monitor:
         self.CopperRingT = data[:,10]
         self.CopperJacketT = data[:,11]
         self.TPCBottomT = data[:,12]
-        self.Time = [(x - self.RefTime - 18000) for x in data[:,13]]
+        self.Time = [(x - self.RefTime - 14400) for x in data[:,13]]
 
 def GetDateFromInput(input):
     dd = list(input)
@@ -70,7 +69,7 @@ def GetDateFromInput(input):
     at = int((dt - tmp).total_seconds())
     return at, dt
 
-def PltWfm(Xe,time, data, label, xlabel, ylabel, title, ylim1=1, ylim2=1, yticks=0):
+def PltWfm(Xe,time, data, label, ylabel, title, xlabel='Time [hh:mm]', ylim1=1, ylim2=1, yticks=0):
     fig = plt.figure(figsize=(12,9))
     if(ylim1!=1 or ylim2!=1):
         plt.ylim(ylim1, ylim2)
@@ -117,30 +116,31 @@ def PlotParameters(Xe):
     print 'plotting temperature'
     Temp = [Xe.ColdHeadT, Xe.CopperRingT, Xe.TPCBottomT, Xe.CopperJacketT]
     TempLabels = [Xe.Name[9],Xe.Name[10],Xe.Name[11],Xe.Name[12]]
-    PltWfm(Xe, time=tt, data=Temp, label=TempLabels, xlabel='Time [hh:mm]', ylabel='Temperature [C]', title = 'temperature', ylim1=-200, ylim2=30, yticks=20)
+    PltWfm(Xe, time=tt, data=Temp, label=TempLabels, ylabel='Temperature [C]', title = 'temperature', ylim1=-200, ylim2=30, yticks=20)
 
     print 'plotting ln level'
     LNLevel = [Xe.LN1Level, Xe.LN2Level]
     LNLabels = [Xe.Name[4],Xe.Name[5]]
-    PltWfm(Xe, time=tt, data=LNLevel, label=LNLabels, xlabel='Time [hh:mm]', ylabel='Level [inch]',  title = 'lnlevel', ylim1=0, ylim2=15, yticks=2.)
+    PltWfm(Xe, time=tt, data=LNLevel, label=LNLabels, ylabel='Level [inch]', title = 'lnlevel', ylim1=0, ylim2=15, yticks=2.)
 
     print 'plotting flow meter'
-    PltWfm(Xe, time=tt, data=[Xe.FlowMeter], label=['Flow Meter'], xlabel='Time [hh:mm]', ylabel='Flow [SLPM]',  title = 'flowmeter', ylim1=0, ylim2=6000, yticks=1000)
+    PltWfm(Xe, time=tt, data=[Xe.FlowMeter], label=['Flow Meter'], ylabel='Flow [SLPM]', title = 'flowmeter', ylim1=0, ylim2=6000, yticks=1000)
 
     print 'plotting stainless steel bottle pressure'
     Pressure = [Xe.SSCylinderP]
     PressureLabels = [Xe.Name[2]]
-    PltWfm(Xe, time=tt, data=Pressure, label=PressureLabels, xlabel='Time [hh:mm]', ylabel='Pressure [PSIG]', title = 'pressure_ssb', ylim1=0, ylim2=1000, yticks=100)
+    PltWfm(Xe, time=tt, data=Pressure, label=PressureLabels, ylabel='Pressure [PSIG]', title = 'pressure_ssb', ylim1=0, ylim2=1000, yticks=100)
 
     print 'plotting gas system and chamber pressure'
     Pressure = [Xe.GasSystemP, Xe.ChamberP]
     PressureLabels = [Xe.Name[0], Xe.Name[1]]
-    PltWfm(Xe, time=tt, data=Pressure, label=PressureLabels, xlabel='Time [hh:mm]', ylabel='Pressure [PSIG]', title = 'pressure_chamber', ylim1=-15, ylim2=15, yticks=5.)
+    PltWfm(Xe, time=tt, data=Pressure, label=PressureLabels, ylabel='Pressure [PSIG]', title = 'pressure_chamber', ylim1=-15, ylim2=15, yticks=5.)
 
     print 'plotting pump pressure'
-    Pressure = [Xe.XenonPumpP, Xe.BackPumpP]
+    # Pressure = [Xe.XenonPumpP, Xe.BackPumpP]
+    Pressure = [Xe.BackPumpP]
     PressureLabels = [Xe.Name[6], Xe.Name[8]]
-    PltWfm(Xe, time=tt, data=Pressure, label=PressureLabels, xlabel='Time [hh:mm]', ylabel='Pressure [PSIG]', title = 'pressure_pump', ylim1=-15, ylim2=5, yticks=5.)
+    PltWfm(Xe, time=tt, data=Pressure, label=PressureLabels, ylabel='Pressure [PSIG]', title = 'pressure_pump', ylim1=.5, ylim2=1.5, yticks=0.2)
 
     if not options.levelfile:
         print 'no capacitance meter data provided'
