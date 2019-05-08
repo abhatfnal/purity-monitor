@@ -13,9 +13,9 @@ parser.add_argument("-f", "--file", type=str, action="store",  dest="filepath", 
 arg = parser.parse_args() 
 
 colors = ['red', 'blue', 'green', 'black', 'orange']
-element = [r'$\mathrm{H}_2\mathrm{O}$', r'$\mathrm{N}_2$', r'$\mathrm{O}_2$', r'$\mathrm{Ar}$', r'$\mathrm{CO}_2$']
-name = ['Water', 'Nitrogen', 'Oxygen', 'Argon', 'Carbondioxide']
-atomic_num = [18, 28, 32, 40, 44]
+element = [r'$\mathrm{He}$', r'$\mathrm{CH}_4$', r'$\mathrm{H}_2\mathrm{O}$', r'$\mathrm{N}_2$', r'$\mathrm{O}_2$', r'$\mathrm{Ar}$', r'$\mathrm{C}_2\mathrm{H}_5\mathrm{OH}$', r'$\mathrm{CO}_2$']
+name = ['Helium', 'Methane', 'Water', 'Nitrogen', 'Oxygen', 'Argon', 'Ethanol','Carbondioxide']
+atomic_num = [2, 16, 18, 28, 32, 40, 41, 44]
 
 fig = plt.figure(figsize=(12,9))
 ax = fig.gca()
@@ -47,12 +47,10 @@ for jj, x in enumerate(arg.filepath):
 mass = np.array(mass)
 pressure = np.array(pressure)
 
-
 for ii, x in enumerate(atomic_num):
     peak = pressure[np.where(mass==x)]
     print mass[np.where(mass==x)][0], '\t', peak[0], '\t', name[ii]
-    ax.annotate(element[ii], xy=(x, peak*1.1), xytext=(x,peak*3), arrowprops=dict(width=0.5, headwidth=4),fontsize=12)
-
+    ax.annotate(element[ii], xy=(x, peak*1.1), xytext=(x, peak*3), arrowprops=dict(facecolor='black', width=0.5, headwidth=4),fontsize=14)
 
 ax.legend(loc='lower left', bbox_to_anchor= (0.0, 1.01), ncol=4, borderaxespad=0, fontsize=12)
 plt.xlim(0, 50)
