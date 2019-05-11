@@ -42,8 +42,22 @@ def GetDictionary():
         'Carbondioxide': {'Mass':44, 'Formula': r'$\mathrm{CO}_2$', 'PumpSpeed':75.5}}
     return Dict
 
+def GetTurnToLeakRate():
+    LeakRate = {
+        0.40: {'LeakRate':0.09, 'Error': 0.01}
+        1.40: {'LeakRate':0.39, 'Error': 0.04}
+        1.60: {'LeakRate':2.36, 'Error': 0.26}
+        1.65: {'LeakRate':3.91, 'Error': 0.43}
+        1.70: {'LeakRate':7.20, 'Error': 0.79}
+        1.75: {'LeakRate':11.73, 'Error': 1.29}
+        1.80: {'LeakRate':28.16, 'Error': 3.10}
+        1.85: {'LeakRate':64.93, 'Error': 7.14}
+        1.90: {'LeakRate':115.78, 'Error': 12.74}}
+    return LeakRate
+
 if __name__ == '__main__':
     Dict = GetDictionary()
+    LeakRate = GetTurnToLeakRate()
 
     fig = plt.figure(figsize=(12,9))
     ax = fig.gca()
