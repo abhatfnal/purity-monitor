@@ -22,7 +22,7 @@ def GetPartialPressure(data, Dict):
     print " | Leak Rate:   ", LeakRate, "mbar L/min"
     print " | Printing concentration of gases..."
     print " | ", 'M [u]', '\t', 'P [mbar]', '\t', 'Conc [%]', '\t', 'ppb', '\t\t', 'Name'
-    for ii,x in enumerate(list(Dict)):
+    for ii,x in enumerate(Dict.keys()):
         Dict[x]['PumpSpeed'] = Dict[x]['PumpSpeed']*60 #convert to min
         y = data[ii] * Dict[x]['PumpSpeed']
         y = y/LeakRate/(XeDensityRatio*CellVolumeRatio)
@@ -53,7 +53,6 @@ def GetTurnToLeakRate():
         1.80: {'LeakRate':28.16, 'Error': 3.10},
         1.85: {'LeakRate':64.93, 'Error': 7.14},
         1.90: {'LeakRate':115.78, 'Error': 12.74}}
-    print LeakRate[1.8]
     return LeakRate
 
 if __name__ == '__main__':
@@ -90,7 +89,7 @@ if __name__ == '__main__':
         mass = np.array(mass)
         pressure = np.array(pressure)
 
-        for x in list(Dict):
+        for x in Dict.keys():
             peak = pressure[np.where(mass==Dict[x]['Mass'])][0]
             ppressure.append(peak)
         ppressure = np.array(ppressure)
@@ -101,9 +100,10 @@ if __name__ == '__main__':
         plt.legend(loc='upper right', prop={'size': 14}, numpoints=1)
 
     PPressure = np.array(PPressure)
-    for ii, x in enumerate(list(Dict)):
+    for ii, x in enumerate(Dict.keys()):
         peak = np.max(PPressure[:,ii])
-        ax.annotate(Dict[x]['Formula'], xy=(Dict[x]['Mass'],peak*1.2), xytext=(Dict[x]['Mass'],peak*3), arrowprops=dict(facecolor='black',width=0.5,headwidth=4), fontsize=14)
+        ax.annotate(Dict[x]['Formula'], xy=(Dict[x]['Mass'],peak*1.2), xytext=(Dict[x]['Mass'],peak*3), arrowprops=dict(facecolor='black',width=0.8,headwidth=5), fontsize=12, ha='center', bbox=dict(boxstyle="round", fc="white", ec="grey"))
+
 
     ax.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=4, borderaxespad=0, fontsize=12)
     plt.xlim(0, 50)
