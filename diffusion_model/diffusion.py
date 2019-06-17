@@ -12,28 +12,28 @@ params = {'text.usetex' : True,
           }
 plt.rcParams.update(params) 
 
-colors = ['#1f78b4', '#e66101', '#33a02c', '#984ea3']
+colors = ['#1f78b4', '#e66101', '#33a02c', '#984ea3', 'black']
 
 
 path = '/home/fas/david_moore/aj487/purity_monitor/plots/diffusion_model/'
+D0 = 0.000225323
+
 
 def GetConcentration(x, Diff, Thickness, Conc): 
     value = 0.0 
-    for N in range(0,1000,1): 
+    for N in range(0,2,1): 
         factor1 = 1.0/((2.0*N+1.0)**2)
         factor2 = np.exp(-(np.pi*(2.0*N+1.0)/Thickness)**2*Diff*x)
-        comp = factor1*factor2
+        comp = factor1*factor2 * (Conc*8.0*Thickness)/(np.pi**2*2.0)
         value = value + comp
-    value = value * (Conc*8.0*Thickness)/(np.pi**2*2.0)
     return value 
 
 def GetFlowRate(x, Diff, Thickness, Conc, Area): 
     value = 0.0 
-    Conc = Conc*Area
-    for N in range(0,1000,1): 
+    for N in range(0,2,1): 
         factor = np.exp(-(np.pi*(2.0*N+1.0)/Thickness)**2*Diff*x)
-        value = value + factor
-    value = value * (Conc*8.0)/Thickness 
+        value = value + factor*(8.0*Conc*Diff)/Thickness
+    value = value * Area 
     return value
 
 def GetDiffTemp(Diff, Temp, Energy=0.17): 
@@ -53,9 +53,11 @@ def PlotDiffVsTemp():
     ax.xaxis.set_major_locator(MultipleLocator(50))
     ax.xaxis.set_minor_locator(MultipleLocator(5))
 
-    cm = plt.get_cmap('gist_rainbow')
-    NUM_COLORS = 20
-    ax.set_color_cycle([cm(1.*i/NUM_COLORS) for i in range(NUM_COLORS)])
+    # cm = plt.get_cmap('gist_rainbow')
+    # NUM_COLORS = 20
+    # ax.set_color_cycle([cm(1.*i/NUM_COLORS) for i in range(NUM_COLORS)])
+    colors = ['#415E80', '#3694FF', '82BCFF', '003A7D', '6896CB', 'B5D6FF', '', '', '', '', '', '', '', '', '', '', '', '', '',]
+    palette = plt.get_cmap('Set1')
 
     plt.xticks(fontsize = 16)
     plt.yticks(fontsize = 16)
@@ -64,10 +66,10 @@ def PlotDiffVsTemp():
     # plt.xscale('log')
     plt.yscale('log')
     x = np.linspace(150,400,400-150)
-    for val in ActEn:
+    for ii,val in enumerate(ActEn):
         Diff0 = Diff/np.exp(-val/(kb*(21+273.15)))
         y = Diff0/timetodays*np.exp(-val/(kb*x))
-        plt.plot(x, y, label='%.2f eV'%val, linewidth=1.5)
+        plt.plot(x, y, label='%.2f eV'%val, linewidth=1.5, color=palette(num))
     Diff0 = Diff/np.exp(-0.17/(kb*(21+273.15)))
     y = Diff0/timetodays*np.exp(-0.17/(kb*x))
     plt.plot(x, y, label='0.17 eV', color='black', linewidth=1.5, linestyle='--')
@@ -85,77 +87,98 @@ def GetLegend(LegendData, Units):
         Legend.append((r'%.2f$\,$'+Units)% x)
     return Legend
 
+def GetXValues(days, multi):
+    xs = []
+    xall = []
+    xind = []
+    for ii,day in enumerate(days): 
+        if ii==0:
+            x = np.linspace(0.0, days[ii], days[ii]*multi[ii]+1)
+            xind.append(np.linspace(0.0, days[ii], days[ii]*multi[ii]+1))
+        else:
+            x = np.linspace(days[ii-1], days[ii], (days[ii]-days[ii-1])*multi[ii]+1)
+            xind.append(np.linspace(0.0, days[ii]-days[ii-1], (days[ii]-days[ii-1])*multi[ii]+1))
+        xs = np.append(xs,x)
+        xall.append(x)
+    return np.asarray([xs]), xall, xind
+
 def PlotEXO200Teflon():
     thickness = 0.15 # cm
-    timetodays = 3600*24
     Ea = 0.17 #eV
-    C0 = 3E5 # ppt exo-200 
-    Diff = 31.4E-8*timetodays # cm^2/day
+    C0 = 8.6E20 # number of total impurities in teflon 
+    Diffs = [0.0271296, 0.0496, 0.000105013] # cm^2/day
+    days = [1,3,10]
+    multi = [20, 20, 20]
+    xs, xall, xind = GetXValues(days=days,multi=multi)
 
-    days = 0.1
-    days2 = days+1
-    days3 = days2+3000
-    multi = 100
-    xall = []
-    x = np.linspace(0.0, days, days*multi+1)
-    x2 = np.linspace(days, days2, (days2-days)*multi+1)
-    x3 = np.linspace(days2, days3, (days3-days2)*multi+1)
-    xs = np.append(x,x2)
-    xs = np.append(xs,x3)
-    xall.append(x)
-    xall.append(x2)
-    xall.append(x3)
+    PDrop = 1000.0
+    PurOutput = 1E16
+    y1 = GetConcentration(xind[0], Diffs[0], thickness, C0)
+    for ii,yy in enumerate(y1): 
+        if y1[ii]<y1[0]/PDrop: 
+            y1[ii] = y1[0]/PDrop
+    y2 = GetConcentration(xind[1], Diffs[1], thickness, y1[-1])
+    y2 = y2 * y1[-1]/y2[0]
+    for ii,yy in enumerate(y2): 
+        if y2[ii]<PurOutput: 
+            y2[ii] = PurOutput 
+    y3 = GetConcentration(xind[2], Diffs[2], thickness, y2[-1])
+    y3 = y3 * y2[-1]/y3[0]
+    y4 = np.array([1.6E17]*len(xs[0]))
+    y5 = np.array([9E16]*xs[0])
 
-    ActEn = GetActEnergy(0.09, 15, 0.03)
-    ActEn = [0.17]
-    yall = []
-    ys = [] 
-    xss = []
-    for ii,val in enumerate(ActEn):
-        y = GetConcentration(x, Diff, thickness, C0)
-        yall.append(y)
-        y2 = GetConcentration(x2, GetDiffTemp(Diff, Temp=273.15+50.0, Energy=val), thickness, y[-1])
-        y2 = y2 * y[-1]/y2[0]
-        y = np.append(y, y2)
-        yall.append(y2)
-        y3 = GetConcentration(x3, GetDiffTemp(Diff, Temp=161.0,Energy=val), thickness, y2[-1])
-        y3 = y3 * y2[-1]/y3[0] 
-        y = np.append(y, y3)
-        ys.append(y)
-        yall.append(y3)
-        xss.append(xs)
+    index1 = np.where(y1==y1[0]/PDrop)[0][0]
+    index2 = np.where(y2==PurOutput)[0][0]
 
-    # Legend = GetLegend(ActEn, 'eV')
-    Legend = ['Pump Down', 'Warm Xenon Gas', 'Liquid Xenon']
-    XRange = [1E-2,np.max(xs)]
-    YRange = [1E-30,np.max(ys)*10]
-    PlotVsTime(XValue=xall,YValue=yall,Legend=Legend,XRange=XRange,YRange=YRange)
+    valx = [item for sublist in [xall,np.array(xs),np.array(xs)] for item in sublist]
+    Legend = ['Pump Down', 'Warm Xenon Gas', 'Liquid Xenon', 'EXO-200', 'Purified']
+    XRange = [1.0/np.max(multi),np.max(xs)]
+    YRange = [np.min(y5[1:])/10,np.max(y1)*10]
+    Label = ['Time [days]','Total Number of Impurities Left in Plastic']
+    PlotVsTime(XValue=valx,YValue=[y1,y2,y3,y4,y5],XRange=XRange,YRange=YRange,Label=Label,Legend=Legend,Log=[False,True])
     plt.savefig(path+'exo_teflon_conc.pdf', dpi=1000, bbox_inches='tight')
-    # plt.show()
+    plt.show()
 
-    Label = ['Time [days]', r'Gas Flow Rate [$\mathrm{Molecules}\,\mathrm{day}^{-1}$]']
-    C00 = 0.046/(693*32) * 6.023E23 
-    Area = 2 * np.pi * 18.3 * 40.0
-    C00 = C00 * Area
-    ys = [] 
-    yall = []
-    for ii,val in enumerate(ActEn):
-        y = GetFlowRate(x, Diff, thickness, C0, Area)
-        yall.append(y)
-        y2 = GetFlowRate(x2, GetDiffTemp(Diff, 273.15+50,val), thickness, y[-1], Area)
-        y2 = y2 * y[-1]/y2[0]
-        y = np.append(y, y2)
-        yall.append(y2)
-        y3 = GetFlowRate(x3, GetDiffTemp(Diff, 161.0,val), thickness, y2[-1], Area)
-        y3 = y3 * y2[-1]/y3[0]
-        y = np.append(y, y3)
-        ys.append(y)
-        yall.append(y3)
+    C0 = 2.29E5*136.0/32.0       # ppt in mol/mol exo-200 
+    C00 = C0 / 136           # ppt in mol/g 
+    C00 = C00 * 3.1           # ppt in mol/cm^3
+    C00 = C00 * 6.023E23      # ppt in #/cm^3
+    C00 = C00 * 1E-12         # units of #/cm^3
+    print C00
+
+    c1 = y1/1E27*1E12 #impurity concentration ppt [mol/mol]
+    c2 = y2/1E27*1E12 #impurity concentration ppt [mol/mol]
+    c3 = y3/1E27*1E12 #impurity concentration ppt [mol/mol]
+    c4 = y4/1E27*1E12 #impurity concentration ppt [mol/mol]
+    
+    YRange = [np.min(c3)/10,np.max(c1)*10]
+    Label = ['Time [days]','Impurity Concentration [ppt]']
+    PlotVsTime(XValue=valx,YValue=[c1,c2,c3,c4],XRange=XRange,YRange=YRange,Label=Label,Legend=Legend,Log=[False,True])
+    plt.savefig(path+'exo_teflon_impur.pdf', dpi=1000, bbox_inches='tight')
+    
+    c1 = y1/64500 # nr of impurities/cm^3
+    c2 = y2/64500 # nr of impurities/cm^3
+    c3 = y3/64500 # nr of impurities/cm^3
+    c4 = y4/64500 # nr of impurities/cm^3
+
+    Area = 2 * np.pi * 18.3 * 40.0 * 2 
+    f1 = GetFlowRate(xind[0], Diffs[0], thickness, c1[0], Area)
+    for ii,ff in enumerate(f1): 
+        if ii>=index1:
+            f1[ii] = 0
+    f2 = GetFlowRate(xind[1], Diffs[1], thickness, c2[0], Area)
+    for ii,ff in enumerate(f2): 
+        if ii>=index2:
+            f2[ii] = 0
+    f3 = GetFlowRate(xind[2], Diffs[2], thickness, c3[0], Area)
+    f4 = [1.4E17]*len(xs[0])
+    print C00, c1[-1], c2[-1]
     XRange = [1E-2,np.max(xs)]
-    YRange = [1E-30,np.max(ys)*10]
-    PlotVsTime(XValue=xall,YValue=yall,Legend=Legend,Label=Label,XRange=XRange,YRange=YRange)
+    YRange = [np.min(f3)/10,np.max(f1)*10]
+    Label = ['Time [days]', r'Outgassing Rate [$\mathrm{Molecules}\,\mathrm{day}^{-1}$]']
+    PlotVsTime(XValue=valx,YValue=[f1,f2,f3,f4],Legend=Legend,Label=Label,XRange=XRange,YRange=YRange,Log=[False,True])
     plt.savefig(path+'exo_teflon_flow.pdf', dpi=1000, bbox_inches='tight')
-    # plt.show()
+    plt.show()
 
 def PlotnEXOKapton():
     C0Kapton = 11156 # ppt nEXO 
@@ -178,7 +201,7 @@ def PlotnEXOKapton():
     y2 = GetFlowRate(x, GetDiffTemp(DKapton, Temp=161.0), TKapton, C0KaptonN, Area)
     Label = ['Time [sec]',r'Gas Flow Rate [$\mathrm{Molecules}\,\mathrm{sec}^{-1}$]']
     PlotVsTime(XValue=[x,x],YValue=[y,y2],Legend=Legend,XRange=XRange,Label=Label)
-    plt.savefig(path+'nexo_kapton_flow.pdf', dpi=1000, bbox_inches='tight')
+    plt.savefig(path+'nexo_kapton_flow.pdf', dpi=1000, bbox_inches='tight', bbox_extra_artists=(lgd))
 
     # plt.show()
 
@@ -210,11 +233,12 @@ def PlotVsTime(XValue,YValue,Legend,Title='',XRange=0,YRange=0,Ticks=[50,10],Lab
     else: 
         plt.ylim(YRange[0],YRange[1])
     for ii, (xval,yval) in enumerate(zip(XValue,YValue)):
-        plt.plot(xval, yval, color=colors[ii], label=Legend[ii], linewidth=1.5)
+        yval = [float('nan') if x==0 else x for x in yval]
+        plt.plot(xval, yval, color=colors[ii], label=Legend[ii], linewidth=2.)
     if(LPos!=(0,0)):
-        ax.legend(loc='lower left', bbox_to_anchor=LPos, ncol=1, borderaxespad=0, fontsize=14)
+        lgd = ax.legend(loc='upper left', bbox_to_anchor=LPos, ncol=1, borderaxespad=0, fontsize=14)
     else:
-        ax.legend(loc='upper right',fontsize=16)
+        lgd = ax.legend(loc='upper right',fontsize=16)
     ax.grid(b=True, which='major', color='k', linestyle='--')
     ax.grid(b=True, which='minor', color='grey', linestyle=':')
     # ax.xaxis.set_major_locator(MultipleLocator(Ticks[0]))
@@ -222,7 +246,7 @@ def PlotVsTime(XValue,YValue,Legend,Title='',XRange=0,YRange=0,Ticks=[50,10],Lab
     plt.xticks(fontsize = 16)
     plt.yticks(fontsize = 16)
     plt.title(Title)
-    fig.tight_layout()
+    # fig.tight_layout()
 
 def PlotLZTeflon():
     timetodays = 3600*24
@@ -249,11 +273,14 @@ def PlotLZTeflon():
     Legend = ['Oxygen', 'Nitrogen', 'Krypton']
     Log = [False,True]
     PlotVsTime(XValue=[x,x,x],YValue=[y,y2,y3],Legend=Legend,Label=Label,Log=Log,YRange=YRange,Size=(10,5))
-    # plt.show()
+    plt.show()
     plt.savefig(path+'lz_teflon_conc.pdf', dpi=1000, bbox_inches='tight')
     # plt.savefig(path+'example.pgf')
 
 def PlotEXOSteel():
+
+
+
     sec = 5000000
     multi = 1
     Flow = 2E-7 *60 #mbar*liter/s
@@ -290,6 +317,6 @@ def PlotEXOSteel():
 if __name__ == '__main__':
     # PlotDiffVsTemp()
     # PlotnEXOKapton()
-    # PlotEXO200Teflon()
+    PlotEXO200Teflon()
     # PlotLZTeflon()
-    PlotEXOSteel()
+    # PlotEXOSteel()
