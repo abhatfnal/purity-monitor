@@ -1,16 +1,15 @@
 import numpy as np
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
-import ROOT
-# ROOT.gROOT.SetBatch(True)
-ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kWarning;")
-ROOT.gStyle.SetOptFit(111)
-ROOT.gStyle.SetOptTitle(111);
+from scipy.optimize import curve_fit
+
+from PlotFunctions import *
+from FitFunctions import * 
+from MatchedFilter import MatchedFilter 
 
 class WFM:
-    def __init__(self, Directory, ID, VScale = "m", TScale = "u"):
+    def __init__(self, ID, VScale = "m", TScale = "u"):
         self.TimeStamp = []
-        self.Directory = Directory
         self.ID = ID
         self.ChName = 'ch%d' % self.ID
         self.Files = 0
@@ -20,6 +19,9 @@ class WFM:
         self.Sampling = 0
         self.BaseCounts = 2500
         self.Amp = [[] for x in range(self.Files)]
+        self.AmpClean = [[] for x in range(self.Files)]
+        self.AmpClean = [[] for x in range(self.Files)]
+        self.AmpSubtract = [[] for x in range(self.Files)]
         self.Baseline = []
         self.BaseStd = []
         self.MeanAmp = []
@@ -33,9 +35,9 @@ class WFM:
         self.TimeFFT = []
         self.VScale = self.Scale(units = VScale)
         self.TScale = self.Scale(units = TScale)
-        self.Label = self.GetChannelName()
         self.Plot = False
         self.CreateTime = []
+        self.Integral = []
 
     def count(self):
         self.counter = self.counter + 1
@@ -45,23 +47,6 @@ class WFM:
         if(units=="u"): return 1000000.0
         if(units=="m"): return 1000.0
         if(units=="1"): return 1.0
-
-    def GetChannelName(self):
-        label = ''
-        if(self.ID == 2):
-            if 'cathode' in self.Directory:
-                label = 'Cathode'
-            if 'anode' in self.Directory:
-                label = 'Anode'
-            if 'anodegrid' in self.Directory:
-                label = 'Anode Grid'
-            if 'cathodegrid' in self.Directory:
-                label = 'Cathode Grid'
-            if 'noise_' in self.Directory:
-                label = 'Noise'
-        else:
-            label = 'Trigger'
-        return label
 
     def FindTimeBin(self, bin):
         return np.abs((np.asarray(self.Time)-bin)).argmin()
@@ -87,32 +72,59 @@ class WFM:
         self.BaseCounts = self.FindTimeBin(-50)
         for i in range(self.Files):
             self.BaseStd.append(np.std(self.Amp[i][:self.BaseCounts]))
-            self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
+            self.Baseline.append(np.average(self.Amp[i][self.FindTimeBin(-50):self.FindTimeBin(0)]))
+            # self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
             self.Amp[i] = self.Amp[i] - self.Baseline[i]
+        self.BaseStd = np.array(self.BaseStd)
+        self.Baseline = np.array(self.Baseline)
+
+    def LinearFunction(self,x,slope,yoffset):
+        return x*slope + yoffset
+
+    def SubtractLinearBackground(self, Time, Data, state=False): 
+        if(state): print " | Subtracting linear background..."
+        for data in Data:
+            UpLimit = -100
+            init_vals = [0,0]
+            best_vals, covar = curve_fit(self.LinearFunction, Time[np.where(Time<UpLimit)], data[np.where(Time<UpLimit)], p0=init_vals)
+            self.AmpSubtract.append(np.array(data - self.LinearFunction(Time, best_vals[0], best_vals[1])))
+            # plt.xlim(-1000,1000)
+            # plt.scatter(Time,Data,s=0.1, c='black')
+            # plt.plot(Time,Data-self.LinearFunction(Time, best_vals[0], best_vals[1]),linewidth=0.02, c='yellow')
+            # plt.plot(Time, self.LinearFunction(Time, best_vals[0], best_vals[1]), label=r'f(x)=$%f \cdot x + %f$' % (best_vals[0], best_vals[1]), linewidth=1.5, c='red')
+            # plt.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=4, borderaxespad=0, fontsize=12)
+            # plt.show()
+        self.AmpSubtract = np.array(self.AmpSubtract)
 
     def SubtractFunction(self, data, fit, start, end, state=False):
         if(state): print " | Subtracting baseline..."
-        # DataMinusFit = [(x-y) for x,y in zip(data[start:end],fit[start:end])]
-        # new = data[:start]
-        # new.extend(DataMinusFit)
-        # new.extend(data[end:])
         new = np.subtract(data,fit, where=((self.Time > start) & (self.Time < end)))
         return new
 
-    def GetAverageWfm(self, state=False):
+    def GetAverageWfm(self, Data, state=False):
         if(state): print " | Getting average waveform..."
-        self.MeanAmp = np.mean(self.Amp, axis=0)
+        self.MeanAmp = np.mean(Data, axis=0)
 
+    def GetIntegral(self, Data, state=False):
+        if(state): print " | Getting average waveform..."
+        for i in range(self.Files):
+            self.Integral.append(np.sum(Data[i][self.FindTimeBin(0):]))
+        self.Integral = np.array(self.Integral)
+        
     def GetAllMaxima(self, data, state=False):
+        self.Max = []
+        self.MaxT = []
         if(state): print " | Getting extrema of individual files..."
         if(self.Pol==1):
             for i in range(self.Files):
-                self.Max.append(np.max(data[i]))
-                self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])])
+                self.Max.append(np.max(data[i,self.FindTimeBin(20):]))
+                self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])[0][0]])
         else:
             for i in range(self.Files):
                 self.Max.append(np.min(data[i]))
-                self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])])
+                self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])[0][0]])
+        self.Max = np.array(self.Max)
+        self.MaxT = np.array(self.MaxT)
 
     def GetAllFFT(self, state=False):
         if(state): print " | Getting Fourier spectra..."
@@ -122,17 +134,17 @@ class WFM:
             self.AmpFFT.append(np.abs(fft(self.Amp[i])[1:self.Samples//2]).tolist())
 
     def RemoveNoise(self,LowCut, HighCut, Order, state=False):
+        self.AmpClean = [] 
         if(state): print " | Removing noise..."
-        self.AmpClean = np.empty(np.shape(self.Amp), float)
         for i in range(self.Files):
-            # self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order))
-            self.AmpClean[i] = self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order)
+            self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order))
+        self.AmpClean = np.array(self.AmpClean)
 
     def butter_bandpass(self, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
-        sos = butter(order, [low, high], analog=False, btype='band', output='sos')
+        sos = butter(order, [low, high], btype='bandpass', output='sos')
         return sos
 
     def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
@@ -142,30 +154,6 @@ class WFM:
 
     def RemoveNoiseSingle(self, data, LowCut, HighCut, Order):
         return self.butter_bandpass_filter(data, LowCut, HighCut, self.Sampling, Order).tolist()
-
-    def FitExponential(self, data, start, end, repeats, state=False):
-        if(state): print " | Fitting exponential to decaying edge..."
-        hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
-        for i in range(len(data)):
-            hist.AddBinContent(i, data[i])
-        f = ROOT.TF1("f","[0]*exp(-[1]*(x-[2]))+[3]", start, end)
-        f.SetLineColor(ROOT.kRed);
-        f.SetNpx(100000);
-
-        ParNames = ['Amplitude', 'Fall Time', 'X Offset', 'Y Offset']
-        ParValues = [1.0, 0.001, 0.0, 0.0]
-        ParLow = [0, 0, -10, -10]
-        ParHigh = [10000, 10000, 10, 10]
-
-        for i in range(len(ParNames)):
-            f.SetParameter(i, ParValues[i])
-            f.SetParLimits(i, ParLow[i], ParHigh[i])
-            f.SetParName(i, ParNames[i])
-
-        for i in range(repeats):
-            hist.Fit("f","RME","");
-        fit = self.exponential_func(np.asarray(self.Time), f.GetParameter(0), f.GetParameter(1), f.GetParameter(2), f.GetParameter(3))
-        return fit
 
     def ShapeGaussian(self, data, sigma):
         gaussian = []
@@ -182,105 +170,8 @@ class WFM:
         self.PeakTime = self.Time[data.index(self.Peak)]
         return self.Peak, self.PeakTime
 
-    def GetFitAmp(self, data, num):
-        ScaleUp = 1.5
-        ScaleLow = 0.5
-        if(self.Pol == -1):
-            amp = np.min(data)
-            low = np.min(data)*ScaleUp
-            high = np.min(data)*ScaleLow
-        else:
-            amp = np.max(data)
-            low = np.max(data)*ScaleLow
-            high = np.max(data)*ScaleUp
-        if(num==0):
-            return amp
-        if(num==1):
-            return low
-        if(num==2):
-            return high
 
-    def FitFullCurve(self, data, start, end, repeats, state=False):
-        if(state): print " | Fitting function to total curve..."
-        hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
-        for i in range(len(data)):
-            hist.AddBinContent(i, data[i])
-        f = ROOT.TF1("f", "([3]/2)*exp(0.5*([1]/[2])^2 -(x-[4])/[2])*erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0]", start, end)
-        f.SetLineColor(ROOT.kRed)
-        f.SetNpx(10000)
-    	f.SetNumberFitPoints(10000);
 
-        ParNames = ['Baseline', 'Rise Time', 'Fall Time', 'Amplitude', 'Peak Time']
-        ParValues = [0.0, 1.0, 100.0, self.GetFitAmp(data,0), 10.0]
-        ParLow = [-1, 0, 100.0, self.GetFitAmp(data,1), 0]
-        ParHigh = [1, 15, 100000.0, self.GetFitAmp(data,2), 1000]
 
-        for i in range(len(ParNames)):
-            f.SetParameter(i, ParValues[i])
-            f.SetParLimits(i, ParLow[i], ParHigh[i])
-            f.SetParName(i, ParNames[i])
 
-        for i in range(repeats-1):
-            print (" | Fit repition... %d" % i)
-            hist.Fit("f", "REQM", "")
-        hist.Fit("f", "REM", "")
 
-        FitParameters = []
-        print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
-        print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
-        print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
-        for i in range(len(ParNames)):
-            print " | Fit parameters...", ParNames[i], f.GetParameter(i)
-            FitParameters.append(f.GetParameter(i))
-
-        print ' | Graph printed...Press any key to continue...'
-        raw_input()
-        return FitParameters
-
-    def FitFullCurveDouble(self, data, start, end, repeats, state=False):
-        if(state): print " | Fitting function to total curve..."
-        hist = ROOT.TH1F("waveform2", "waveform2", self.Samples, self.Time[0],self.Time[-1])
-        for i in range(len(data)):
-            hist.AddBinContent(i, data[i])
-
-        f = ROOT.TF1("f2", "[3]/2*exp(0.5*([1]/[2])^2 - (x-[4])/[2]) * erfc(([1]/[2]-(x-[4])/[1])/sqrt(2))+[0] + [8]/2*exp(0.5*([6]/[7])^2 - (x-[9])/[7]) * erfc(([6]/[7]-(x-[9])/[6])/sqrt(2))+[5]", start, end)
-        f.SetLineColor(ROOT.kRed)
-        f.SetNpx(100000)
-
-        ParNames = ['Baseline', 'Rise Time', 'Fall Time', 'Amplitude', 'Peak Time', 'Baseline 2', 'Rise Time 2', 'Fall Time 2', 'Amplitude 2', 'Peak Time 2']
-        ParValues = [0.0, 1.0, 100.0, self.GetFitAmp(data,0), 10.0, 0.0, 1.0, 100.0, self.GetFitAmp(data,0), 10.0]
-        ParLow = [-1, 0, 100.0, self.GetFitAmp(data,1), 0, -1, 0, 100.0, self.GetFitAmp(data,1), 0]
-        ParHigh = [1, 15, 100000.0, self.GetFitAmp(data,2), 1000, 1, 15, 100000.0, self.GetFitAmp(data,2), 1000]
-
-        ParValues[:5] = self.FitFullCurve(data, -100, 70, 5)
-        ParValues[5:10] = self.FitFullCurve(data, 90, 300, 5)
-        ParLow = 0.5*np.asarray(ParValues)
-        ParHigh = 1.5*np.asarray(ParValues)
-        print len(ParLow)
-        print len(ParHigh)
-        print len(ParValues)
-        print ParValues
-        print 'seperate fits done'
-
-        for i in range(len(ParNames)):
-            print i
-            f.SetParameter(i, ParValues[i])
-            f.SetParLimits(i, ParLow[i], ParHigh[i])
-            f.SetParName(i, ParNames[i])
-
-        for i in range(repeats-1):
-            print (" | Fit repition... %d" % i)
-            hist.Fit("f2", "REMQ", "")
-        hist.Fit("f2", "REM", "")
-
-        FitParameters = []
-        print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
-        print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
-        print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
-        for i in range(len(ParNames)):
-            print " | Fit parameters...", ParNames[i], f.GetParameter(i)
-            FitParameters.append(f.GetParameter(i))
-
-        print ' | Graph printed...Press any key to continue...'
-        raw_input()
-        return FitParameters
