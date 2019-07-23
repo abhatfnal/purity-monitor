@@ -9,6 +9,7 @@ from matplotlib.dates import DateFormatter
 from scipy.optimize import curve_fit
 from scipy.stats import chisquare
 
+
 now = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 RGAPath = '/home/fas/david_moore/sjb93'
 SaveName = RGAPath+"/rga_"+now+".pdf" 
