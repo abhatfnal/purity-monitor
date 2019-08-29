@@ -9,7 +9,6 @@ from matplotlib.dates import DateFormatter
 from scipy.optimize import curve_fit
 from scipy.stats import chisquare
 
-
 now = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 RGAPath = '/home/fas/david_moore/sjb93'
 SaveName = RGAPath+"/rga_"+now+".pdf" 
@@ -64,6 +63,13 @@ def GetTurnToLeakRate():
         1.90: {'LeakRate':115.78, 'Error': 12.74}}
     return LeakRate
 
+def turn_file_names_into_date_times(imaginary_file_names):
+    path, imaginary_file_names = os.path.split(imaginary_file_names)
+    if imaginary_file_names[-6:-4] == 'PM' or imaginary_file_names[-6:-4] == 'AM':
+        return (datetime.datetime.strptime(imaginary_file_names[0:24], '%b_%d_%Y__%I-%M-%S_%p'))
+    else: # This is used when the files are given in a 24 hour format
+        return (datetime.datetime.strptime(imaginary_file_names[0:21], '%b_%d_%Y__%H-%M-%S'))
+
 def ChooseFilesToAnalyze(arg):
     files = []
     if (arg.dirpath != None):
@@ -75,7 +81,8 @@ def ChooseFilesToAnalyze(arg):
         else:
             files.append(arg.filepath) 	
     files = [val for sublist in files for val in sublist]
-    return sorted(files)
+    # convert all the file names into datetime strings and then sort them
+    return sorted(files, key=turn_file_names_into_date_times)
 
 def PlotOverTime(time, data, files):
     fig = plt.figure(figsize=(12.4,7))
@@ -86,18 +93,25 @@ def PlotOverTime(time, data, files):
     # ax.xaxis.set_minor_locator(MultipleLocator(1))
     ax.set_yscale('log')
     plt.gcf().autofmt_xdate()
-    formatter = DateFormatter('%b_%d_%Y__%H-%M-%S')
+    print str(time[0])[-2:]
+    if str(time[0])[-2:] == 'AM' or str(time[0])[-2:] == 'PM':
+        formatter = DateFormatter('%b_%d_%Y__%I-%M-%S_%p')
+    else: 
+        formatter = DateFormatter('%b_%d_%Y__%H-%M-%S')
     plt.gcf().axes[0].xaxis.set_major_formatter(formatter)
     plt.xticks(fontsize = 14)
     plt.yticks(fontsize = 14)
     plt.xlabel('Time', fontsize=14)
     plt.ylabel('Pressure [mbar]', fontsize=14)
-    timet = [datetime.datetime.strptime(x, '%b_%d_%Y__%H-%M-%S') for x in time]
+    if str(time[0])[-2:] == 'AM' or str(time[0])[-2:] == 'PM':
+        timet = [datetime.datetime.strptime(x, '%b_%d_%Y__%I-%M-%S_%p') for x in time]
+    else: 
+        timet = [datetime.datetime.strptime(x, '%b_%d_%Y__%H-%M-%S') for x in time]
     plt.xlim(timet[0], timet[-1])
     label = [r'$\mathrm{H}_2\mathrm{O}$', r'$\mathrm{N}_2$', r'$\mathrm{O}_2$', r'$\mathrm{C}_2\mathrm{H}_5\mathrm{OH}$', r'$\mathrm{CO}_2$']
     for ii,x in enumerate(data): 
         plt.plot(timet, x, label=label[ii])
-    plt.legend(loc='upper right', prop={'size': 14}, numpoints=1)
+    plt.legend(loc='upper left', prop={'size': 14}, numpoints=1)
 
 
 def func(x, a, b, c):
@@ -113,9 +127,14 @@ def PlotBestFitOverTime(time,data,files):
     plt.yticks(fontsize = 14)
     plt.xlabel('Time (s)', fontsize=14)
     plt.ylabel('Pressure [mbar]', fontsize=14)
-    timet = [datetime.datetime.strptime(x, '%b_%d_%Y__%H-%M-%S') for x in time]
-    timet = [datetime.timedelta.total_seconds(x-timet[0]) for x in timet]
-    timet = np.array(timet)
+    if str(time[0])[-2:] == 'AM' or str(time[0])[-2:] == 'PM':
+        timet = [datetime.datetime.strptime(x, '%b_%d_%Y__%I-%M-%S_%p') for x in time]
+        timet = [datetime.timedelta.total_seconds(x-timet[0]) for x in timet]
+        timet = np.array(timet)
+    else:
+        timet = [datetime.datetime.strptime(x, '%b_%d_%Y__%H-%M-%S') for x in time]
+        timet = [datetime.timedelta.total_seconds(x-timet[0]) for x in timet]
+        timet = np.array(timet)
     plt.xlim(timet[0], timet[-1])
     label = [r'$\mathrm{H}_2\mathrm{O}$', r'$\mathrm{N}_2$', r'$\mathrm{O}_2$',r'$\mathrm{C}_2\mathrm{H}_5\mathrm{OH}$', r'$\mathrm{CO}_2$']
     label2 = ["Fit" r'$\mathrm{H}_2\mathrm{O}$', "Fit" r'$\mathrm{N}_2$', "Fit" r'$\mathrm{O}_2$', "Fit" r'$\mathrm{C}_2\mathrm{H}_5\mathrm{OH}$', "Fit" r'$\mathrm{CO}_2$']
@@ -124,7 +143,7 @@ def PlotBestFitOverTime(time,data,files):
     for ii,x in enumerate(data): 
         plt.scatter(timet, x, label=label[ii], color = colors[ii])
     for ii,x in enumerate(data): 
-        param, pcov = curve_fit(func, timet, x, p0=(1E-8,1E-8,1E-8))
+        param, pcov = curve_fit(func, timet, x, p0=(1E-6,1E-6,1E-6))
         xsquared = chisquare(x,func(timet,*param),axis = None)
         print(str(label3[ii]) + str(param) + " chi squared value = " + str(xsquared) + "\n")
         plt.plot(timet, func(timet, *param), label=label2[ii], color = colors[ii])
@@ -167,7 +186,10 @@ if __name__ == '__main__':
         #print filename[-15:-7]
         # print datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         #time.append(filename[-15:-7]) # this line only reads out the hour and minute
-        time.append(filename[0:21]) # this line reads out the whole time stamp down to the second
+        if str(filename[-6:-4]) == 'AM' or str(filename[-6:-4]) == 'PM':
+            time.append(filename[0:24])
+        else:
+            time.append(filename[0:21]) # this line reads out the whole time stamp down to the second
         #print(filename[0:21]) # this line serves as a test
         for ii, line in enumerate(file):
             # This is the line that just skips the first 22 lines of header about the infro of when the data were taken
