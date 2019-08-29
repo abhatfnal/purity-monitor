@@ -7,7 +7,7 @@ def MatchedFilter(Time, Data):
     Template = np.mean(Data, axis=0)
 
     new = vary_pulse_time(Data[0], Time, Template)
-    print new
+    print(new)
     # plt.plot(Data[0])
     plt.plot(new)
     plt.yscale('log')
@@ -48,7 +48,7 @@ def vary_pulse_time(curve , time, Template):
     array = []
     J = abs(np.fft.rfft(curve[np.where(time<-100)])) ** 2
     for t0_hat in np.linspace(time[0], time[-1], len(time)/5000):
-        print t0_hat
+        print(t0_hat)
         n = range(0, 2251, 1)
         j = complex(0, 1)
         n_pi = np.linspace(-2251 * np.pi, 2251 * np.pi, 2251)

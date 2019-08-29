@@ -54,21 +54,21 @@ class WFM:
     def SetPolarity(self):
         if self.Label == 'Cathode':
             self.Pol = -1
-            print " | This is a cathode signal..."
+            print(" | This is a cathode signal...")
         if self.Label == 'Cathode Grid':
             self.Pol = 1
-            print " | This is not a cathode signal..."
+            print(" | This is not a cathode signal...")
         if self.Label == 'Anode':
             self.Pol = +1
-            print " | This is an anode signal..."
+            print(" | This is an anode signal...")
 
     def GetSampling(self, state=False):
-        if(state): print " | Get sampling..."
+        if(state): print(" | Get sampling...")
         self.Sampling = self.TScale/abs(self.Time[0]-self.Time[1])
         self.Samples = len(self.Time)
 
     def SubtractBaseline(self, state=False):
-        if(state): print " | Subtracting baseline..."
+        if(state): print(" | Subtracting baseline...")
         self.BaseCounts = self.FindTimeBin(-50)
         for i in range(self.Files):
             self.BaseStd.append(np.std(self.Amp[i][:self.BaseCounts]))
@@ -82,7 +82,7 @@ class WFM:
         return x*slope + yoffset
 
     def SubtractLinearBackground(self, Time, Data, state=False): 
-        if(state): print " | Subtracting linear background..."
+        if(state): print(" | Subtracting linear background...")
         for data in Data:
             UpLimit = -100
             init_vals = [0,0]
@@ -97,16 +97,16 @@ class WFM:
         self.AmpSubtract = np.array(self.AmpSubtract)
 
     def SubtractFunction(self, data, fit, start, end, state=False):
-        if(state): print " | Subtracting baseline..."
+        if(state): print(" | Subtracting baseline...")
         new = np.subtract(data,fit, where=((self.Time > start) & (self.Time < end)))
         return new
 
     def GetAverageWfm(self, Data, state=False):
-        if(state): print " | Getting average waveform..."
+        if(state): print(" | Getting average waveform...")
         self.MeanAmp = np.mean(Data, axis=0)
 
     def GetIntegral(self, Data, state=False):
-        if(state): print " | Getting average waveform..."
+        if(state): print(" | Getting average waveform...")
         for i in range(self.Files):
             self.Integral.append(np.sum(Data[i][self.FindTimeBin(0):]))
         self.Integral = np.array(self.Integral)
@@ -114,7 +114,7 @@ class WFM:
     def GetAllMaxima(self, data, state=False):
         self.Max = []
         self.MaxT = []
-        if(state): print " | Getting extrema of individual files..."
+        if(state): print(" | Getting extrema of individual files...")
         if(self.Pol==1):
             for i in range(self.Files):
                 self.Max.append(np.max(data[i,self.FindTimeBin(20):]))
@@ -127,7 +127,7 @@ class WFM:
         self.MaxT = np.array(self.MaxT)
 
     def GetAllFFT(self, state=False):
-        if(state): print " | Getting Fourier spectra..."
+        if(state): print(" | Getting Fourier spectra...")
         T = 1.0 / self.Sampling
         self.TimeFFT = np.linspace(0.0, 1.0/(2.0*T), self.Samples/2)[1:self.Samples//2]
         for i in range(self.Files):
@@ -135,7 +135,7 @@ class WFM:
 
     def RemoveNoise(self,LowCut, HighCut, Order, state=False):
         self.AmpClean = [] 
-        if(state): print " | Removing noise..."
+        if(state): print(" | Removing noise...")
         for i in range(self.Files):
             self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order))
         self.AmpClean = np.array(self.AmpClean)

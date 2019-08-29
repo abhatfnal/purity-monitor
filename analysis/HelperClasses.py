@@ -18,7 +18,7 @@ def ProgressBar(it, counts):
         sys.stdout.write("\n")
 
 def ElapsedTime():
-    print " | Time elapsed:          ", time.clock() , "sec"
+    print(" | Time elapsed:          ", time.process_time() , "sec")
 
 class MetaData:
     def __init__(self, InputPath):

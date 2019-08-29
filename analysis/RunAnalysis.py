@@ -4,6 +4,7 @@ import time, datetime, sys, os, glob, struct, h5py, argparse
 
 from WaveformClass import *
 from HelperClasses import *
+from MatchedFilter import MatchedFilter
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--file", type=str, action="store",  dest="filepath", nargs="*", help="Specify path/file to be read in.")
@@ -14,7 +15,7 @@ arg = parser.parse_args()
 
 def ImportDataFromHDF5(file, channels):
     f = h5py.File(file, 'r')
-    print " | Filename...", file 
+    print(" | Filename...", file)
     Keys = list(f.keys())
     for ch in channels:
         ch.Time = np.array(f.get('Time')).flatten() * ch.TScale
@@ -22,32 +23,30 @@ def ImportDataFromHDF5(file, channels):
         Group = f.get(ch.ChName)
         GroupKeys = Group.keys()
         ch.Files += len(GroupKeys)
-        print " | Number of files in ch%d...\t" % ch.ID, ch.Files
+        print(" | Number of files in ch%d...\t" % ch.ID, ch.Files)
         for key in GroupKeys:
             ch.Amp.append(np.array(Group.get(key)).flatten() * ch.VScale)
-            ch.TimeStamp.append(datetime.datetime.strptime(f.attrs['Date']+Group.get(key).attrs["TimeStamp"], '%Y%m%d%H%M%S'))
+            ch.TimeStamp.append(datetime.datetime.strptime((f.attrs['Date']+Group.get(key).attrs["TimeStamp"]).decode('utf-8'), '%Y%m%d%H%M%S'))
         
 def DoAnalysis(channels):
-    first = True
+    Print = True
     for ii, ch in enumerate(channels):
-        print " | Processing data in channel %d..." % (ch.ID)
+        print(" | Processing data in channel %d..." % (ch.ID))
         ch.Amp = np.array(ch.Amp)
         ch.GetSampling()
-        ch.SubtractBaseline(state=first)
-        # ch.GetAllFFT(state=first)
-        ch.RemoveNoise(LowCut=0, HighCut=100E3, Order=1, state=first)
-        # ch.SubtractLinearBackground(ch.Time, ch.AmpClean, state=first)
-        ch.GetAllMaxima(data=ch.AmpClean, state=first)
+        ch.SubtractBaseline(state=Print)
+        # ch.GetAllFFT(state=Print)
+        ch.RemoveNoise(LowCut=1E2, HighCut=50E3, Order=3, state=Print)
+        # ch.SubtractLinearBackground(ch.Time, ch.AmpClean, state=Print)
+        ch.GetAllMaxima(data=ch.AmpClean, state=Print)
         # ch.GetIntegral(Data=ch.AmpClean)
-        ch.GetAverageWfm(Data=ch.AmpClean, state=first)
-    print " | Time elapsed: ", time.clock() , "sec"
+        ch.GetAverageWfm(Data=ch.AmpClean, state=Print)
+    print(" | Time elapsed: ", time.process_time() , "sec")
+
 
 def SaveNpy(time, data, filename='test'):
     data = np.column_stack((np.asarray(time), np.asarray(data)))
     np.save(filename, data)
-
-def ChangeTime(data):
-    return [datetime.datetime.strptime(x, '%Y%m%d%H%M%S') for x in data]
 
 def ChooseFilesToAnalyze(arg):
     files = []
@@ -63,22 +62,59 @@ def ChooseFilesToAnalyze(arg):
     return files
 
 def StandardPlots(ch1, ch2):
-    print " | Plotting data..."
+    print(" | Plotting data...")
+
+    ch1.TimeStamp = np.array(ch1.TimeStamp)
+    good =  np.where(ch1.BaseStd<6)
+
+    ch1.Max = ch1.Max[good]
+    ch2.Max = ch2.Max[good]
+
+    ch1.MaxT = ch1.MaxT[good]
+    ch2.MaxT = ch2.MaxT[good]
+
+    ch1.BaseStd = ch1.BaseStd[good]
+    ch2.BaseStd = ch2.BaseStd[good]
+
+    ch1.TimeStamp = ch1.TimeStamp[good]
+
     ratio = -ch1.Max/ch2.Max
+
+    print(len(ratio))
     DriftTime = ch1.MaxT - ch2.MaxT
-    print " | Drift Time...", np.mean(DriftTime), np.std(DriftTime)
-    print " | Charge collection...", np.mean(ratio), np.std(ratio), np.std(ratio)/np.sqrt(len(ratio))
-    print " | Lifetime...", -np.mean(DriftTime)/np.log(np.mean(ratio)), 'ms'
-    print " | Time elapsed: ", time.clock() , "sec"
+    print(" | Drift Time...", np.mean(DriftTime), np.std(DriftTime))
+    print(" | Charge collection...", np.mean(ratio), np.std(ratio), np.std(ratio)/np.sqrt(len(ratio)))
+    print(" | Lifetime...", -np.mean(DriftTime)/np.log(np.mean(ratio)), 'us')
+    
+    print(" | Drift Time...", np.median(DriftTime), np.std(DriftTime))
+    print(" | Charge collection...", np.median(ratio), np.std(ratio), np.std(ratio)/np.sqrt(len(ratio)))
+    print(" | Lifetime...", -np.median(DriftTime)/np.log(np.median(ratio)), 'us')
+    print(" | Time elapsed: ", time.process_time() , "sec")
 
     DiffMinute = int((np.max(ch1.TimeStamp) - np.min(ch1.TimeStamp)).seconds/60.0 + 0.5)
-    XTicks = [int(DiffMinute/12.0/3.0*60.0), int(DiffMinute/12.0 + 0.5)]
+    XTicks = int(DiffMinute/12.0 + 0.5)
 
-    PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,-1*ch2.Max,ratio*100],Legend=['Anode','Cathode','Charge Collection [\%]'],Label='Amplitude [mV]',XTicks=XTicks,YTicks=[5,20],Save='amp_ratio')
-    PltTime(Time=ch1.TimeStamp,Data=[ch1.MaxT,ch2.MaxT,DriftTime],Legend=['Anode','Cathode','Drift Time [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=[10,50],Save='drift_time')
-    PltTime(Time=ch1.TimeStamp,Data=[ch1.BaseStd,ch2.BaseStd],Legend=['Anode','Cathode'],Label='Baseline Noise [mV]',XTicks=XTicks,YTicks=[1,1],YRange=[0,4],Save='baseline')
-    PltTime(Time=ch1.TimeStamp,Data=[ratio],Legend=[''],Label='Charge Collection',YRange=[0,2],XTicks=XTicks,YTicks=[0.1,0.5],Save='ratio')
-    PltWfm(Time=ch1.Time,Data=[ch1.MeanAmp,-1*ch2.MeanAmp],Legend=['Anode','Cathode'],XTicks=[50,100],YTicks=[5,10],Save='avg_waveform')
+    # for x,y in zip(ch1.Amp, ch1.AmpClean): 
+    #     plt.xlim(-1000,1000)
+    #     plt.plot(ch1.Time, x, color='black',linewidth=1.0)
+    #     plt.plot(ch1.Time, y, color='blue',linewidth=1.0)
+    #     plt.show()
+    #     plt.close()
+
+    SavePath = '/home/fas/david_moore/aj487/purity_monitor/plots/analysis/'
+    Date = datetime.datetime.now().strftime("%Y%m%d")
+    Save = True 
+    if Save:
+        if not os.path.exists(SavePath+Date):
+            os.makedirs(SavePath+Date)
+    PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,-1*ch2.Max,ratio*100],Legend=['Anode','Cathode','Charge Collection [\%]'],Label='Amplitude [mV]',XTicks=XTicks,YTicks=50,SaveName='amp_ratio',Save=Save)
+    # PltTime(Time=ch1.TimeStamp,Data=[ch1.MaxT,ch2.MaxT,DriftTime],Legend=['Anode','Cathode','Drift Time [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='drift_time',Save=Save)
+    # PltTime(Time=ch1.TimeStamp,Data=[ch1.BaseStd,ch2.BaseStd],Legend=['Anode','Cathode'],Label='Baseline Noise [mV]',XTicks=XTicks,YTicks=2,YRange=[0,10],SaveName='baseline',Save=Save)
+    # PltTime(Time=ch1.TimeStamp,Data=[ratio],Legend=[''],Label='Charge Collection',YRange=[0,2],XTicks=XTicks,YTicks=0.5,SaveName='ratio',Save=Save)
+    # PltWfm(Time=ch1.Time,Data=[ch1.MeanAmp,-1*ch2.MeanAmp],Legend=['Anode','Cathode'],XTicks=100,YTicks=50,SaveName='avg_waveform')
+    # PltWfm(Time=ch1.Time,Data=list(ch1.AmpClean),Legend=['Anode','Cathode'],XTicks=100,YTicks=50,SaveName='avg_waveform',Color='k')
+    # PltAllWfm(Time=ch2.Time,Data=list(ch2.Amp)[:10],Legend=[''],XTicks=100,YTicks=50,Save='all_waveform',Color='k')
+    
     # PltWfm(Time=ch1.Time,Data=list(ch1.Amp),Legend=[''],XTicks=[50,100],YTicks=[5,10],Color='k',Save='ch1_all_waveforms')
     # PltWfm(Time=ch2.Time,Data=list(ch2.Amp),Legend=[''],XTicks=[50,100],YTicks=[5,10],Color='k',Save='ch2_all_waveforms')
 
@@ -108,7 +144,7 @@ if __name__ == '__main__':
     ###### Plotting and saving standard plots for the analysis 
     StandardPlots(ch1,ch2)
     
-    print " | Time elapsed: ", time.clock() , "sec"
+    print(" | Time elapsed: ", time.process_time() , "sec")
    
 
     ###### Additional manual analysis and plotting 

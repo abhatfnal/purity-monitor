@@ -1,6 +1,10 @@
 import numpy as np
 
 
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
+
 def GetFitAmp(self, data, num):
     ScaleUp = 2.0
     ScaleLow = 0.1
@@ -27,7 +31,7 @@ def FitFullCurve(self, data, start, end, repeats, state=False):
     ROOT.gStyle.SetOptTitle(111)
 
 
-    if(state): print " | Fitting function to total curve..."
+    if(state): print(" | Fitting function to total curve...")
     hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
     for i in range(len(data)):
         hist.AddBinContent(i, data[i])
@@ -41,9 +45,9 @@ def FitFullCurve(self, data, start, end, repeats, state=False):
     ParLow = [-1, 0, 10.0, GetFitAmp(self, data,1), 0]
     ParHigh = [1, 25, 100000.0, GetFitAmp(self, data,2), 1000]
     
-    print ParValues 
-    print ParLow 
-    print ParHigh
+    print(ParValues)
+    print(ParLow)
+    print(ParHigh)
 
     for i in range(len(ParNames)):
         f.SetParameter(i, ParValues[i])
@@ -51,19 +55,19 @@ def FitFullCurve(self, data, start, end, repeats, state=False):
         f.SetParName(i, ParNames[i])
 
     for i in range(repeats-1):
-        print (" | Fit repition... %d" % i)
+        print((" | Fit repition... %d" % i))
         hist.Fit("f", "REQM", "")
     hist.Fit("f", "REM", "")
 
     FitParameters = []
-    print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
-    print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
-    print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
+    print(' | Extremum:', f.GetMaximum(), f.GetMinimum())
+    print(' | Position:', f.GetMaximumX(), f.GetMinimumX())
+    print(" | Reduced chi square...", f.GetChisquare()/f.GetNDF())
     for i in range(len(ParNames)):
-        print " | Fit parameters...", ParNames[i], f.GetParameter(i)
+        print(" | Fit parameters...", ParNames[i], f.GetParameter(i))
         FitParameters.append(f.GetParameter(i))
 
-    print ' | Graph printed...Press any key to continue...'
+    print(' | Graph printed...Press any key to continue...')
     raw_input()
     return FitParameters
 
@@ -74,7 +78,7 @@ def FitFullCurveDouble(self, data, start, end, repeats, state=False):
     ROOT.gStyle.SetOptFit(111)
     ROOT.gStyle.SetOptTitle(111)
 
-    if(state): print " | Fitting function to total curve..."
+    if(state): print(" | Fitting function to total curve...")
     hist = ROOT.TH1F("waveform2", "waveform2", self.Samples, self.Time[0],self.Time[-1])
     for i in range(len(data)):
         hist.AddBinContent(i, data[i])
@@ -92,32 +96,32 @@ def FitFullCurveDouble(self, data, start, end, repeats, state=False):
     ParValues[5:10] = self.FitFullCurve(data, 90, 300, 5)
     ParLow = 0.5*np.asarray(ParValues)
     ParHigh = 1.5*np.asarray(ParValues)
-    print len(ParLow)
-    print len(ParHigh)
-    print len(ParValues)
-    print ParValues
-    print 'seperate fits done'
+    print(len(ParLow))
+    print(len(ParHigh))
+    print(len(ParValues))
+    print(ParValues)
+    print('seperate fits done')
 
     for i in range(len(ParNames)):
-        print i
+        print(i)
         f.SetParameter(i, ParValues[i])
         f.SetParLimits(i, ParLow[i], ParHigh[i])
         f.SetParName(i, ParNames[i])
 
     for i in range(repeats-1):
-        print (" | Fit repition... %d" % i)
+        print((" | Fit repition... %d" % i))
         hist.Fit("f2", "REMQ", "")
     hist.Fit("f2", "REM", "")
 
     FitParameters = []
-    print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
-    print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
-    print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
+    print(' | Extremum:', f.GetMaximum(), f.GetMinimum())
+    print(' | Position:', f.GetMaximumX(), f.GetMinimumX())
+    print(" | Reduced chi square...", f.GetChisquare()/f.GetNDF())
     for i in range(len(ParNames)):
-        print " | Fit parameters...", ParNames[i], f.GetParameter(i)
+        print(" | Fit parameters...", ParNames[i], f.GetParameter(i))
         FitParameters.append(f.GetParameter(i))
 
-    print ' | Graph printed...Press any key to continue...'
+    print(' | Graph printed...Press any key to continue...')
     raw_input()
     return FitParameters
 
@@ -130,7 +134,7 @@ def FitSine(self, data, start, end, repeats, state=False):
     ROOT.gStyle.SetOptFit(111)
     ROOT.gStyle.SetOptTitle(111)
 
-    if(state): print " | Fitting function to total curve..."
+    if(state): print(" | Fitting function to total curve...")
     hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
     for i in range(len(data)):
         hist.AddBinContent(i, data[i])
@@ -150,19 +154,19 @@ def FitSine(self, data, start, end, repeats, state=False):
         f.SetParName(i, ParNames[i])
 
     for i in range(repeats-1):
-        print (" | Fit repition... %d" % i)
+        print((" | Fit repition... %d" % i))
         hist.Fit("f", "REQM", "")
     hist.Fit("f", "REM", "")
 
     FitParameters = []
-    print ' | Extremum:', f.GetMaximum(), f.GetMinimum()
-    print ' | Position:', f.GetMaximumX(), f.GetMinimumX()
-    print " | Reduced chi square...", f.GetChisquare()/f.GetNDF()
+    print(' | Extremum:', f.GetMaximum(), f.GetMinimum())
+    print(' | Position:', f.GetMaximumX(), f.GetMinimumX())
+    print(" | Reduced chi square...", f.GetChisquare()/f.GetNDF())
     for i in range(len(ParNames)):
-        print " | Fit parameters...", ParNames[i], f.GetParameter(i)
+        print(" | Fit parameters...", ParNames[i], f.GetParameter(i))
         FitParameters.append(f.GetParameter(i))
 
-    print ' | Graph printed...Press any key to continue...'
+    print(' | Graph printed...Press any key to continue...')
     raw_input()
     return FitParameters
 
@@ -173,7 +177,7 @@ def FitExponential(self, data, start, end, repeats, state=False):
     ROOT.gStyle.SetOptFit(111)
     ROOT.gStyle.SetOptTitle(111)
 
-    if(state): print " | Fitting exponential to decaying edge..."
+    if(state): print(" | Fitting exponential to decaying edge...")
     hist = ROOT.TH1F("waveform", "waveform", self.Samples, self.Time[0],self.Time[-1])
     for i in range(len(data)):
         hist.AddBinContent(i, data[i])
