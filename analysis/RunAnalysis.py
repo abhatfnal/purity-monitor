@@ -41,6 +41,7 @@ def DoAnalysis(channels):
         ch.GetAllMaxima(data=ch.AmpClean, state=Print)
         # ch.GetIntegral(Data=ch.AmpClean)
         ch.GetAverageWfm(Data=ch.AmpClean, state=Print)
+        ch.FindMaxGradient(Data=ch.AmpClean ,state=Print)
     print(" | Time elapsed: ", time.process_time() , "sec")
 
 
@@ -65,13 +66,16 @@ def StandardPlots(ch1, ch2):
     print(" | Plotting data...")
 
     ch1.TimeStamp = np.array(ch1.TimeStamp)
-    good =  np.where(ch1.BaseStd<6)
+    good =  np.where(ch1.BaseStd<10)
 
     ch1.Max = ch1.Max[good]
     ch2.Max = ch2.Max[good]
 
     ch1.MaxT = ch1.MaxT[good]
     ch2.MaxT = ch2.MaxT[good]
+
+    ch1.GradTime = ch1.GradTime[good]
+    ch2.GradTime = ch2.GradTime[good]
 
     ch1.BaseStd = ch1.BaseStd[good]
     ch2.BaseStd = ch2.BaseStd[good]
@@ -80,8 +84,8 @@ def StandardPlots(ch1, ch2):
 
     ratio = -ch1.Max/ch2.Max
 
-    print(len(ratio))
-    DriftTime = ch1.MaxT - ch2.MaxT
+    # DriftTime = ch1.MaxT - ch2.MaxT + 25
+    DriftTime = ch1.GradTime-ch2.GradTime
     print(" | Drift Time...", np.mean(DriftTime), np.std(DriftTime))
     print(" | Charge collection...", np.mean(ratio), np.std(ratio), np.std(ratio)/np.sqrt(len(ratio)))
     print(" | Lifetime...", -np.mean(DriftTime)/np.log(np.mean(ratio)), 'us')
@@ -92,23 +96,17 @@ def StandardPlots(ch1, ch2):
     print(" | Time elapsed: ", time.process_time() , "sec")
 
     DiffMinute = int((np.max(ch1.TimeStamp) - np.min(ch1.TimeStamp)).seconds/60.0 + 0.5)
-    XTicks = int(DiffMinute/12.0 + 0.5)
-
-    # for x,y in zip(ch1.Amp, ch1.AmpClean): 
-    #     plt.xlim(-1000,1000)
-    #     plt.plot(ch1.Time, x, color='black',linewidth=1.0)
-    #     plt.plot(ch1.Time, y, color='blue',linewidth=1.0)
-    #     plt.show()
-    #     plt.close()
+    XTicks = int((DiffMinute/12.0 + 0.5))+1
 
     SavePath = '/home/fas/david_moore/aj487/purity_monitor/plots/analysis/'
     Date = datetime.datetime.now().strftime("%Y%m%d")
-    Save = True 
+    Save = False 
     if Save:
         if not os.path.exists(SavePath+Date):
             os.makedirs(SavePath+Date)
     PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,-1*ch2.Max,ratio*100],Legend=['Anode','Cathode','Charge Collection [\%]'],Label='Amplitude [mV]',XTicks=XTicks,YTicks=50,SaveName='amp_ratio',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ch1.MaxT,ch2.MaxT,DriftTime],Legend=['Anode','Cathode','Drift Time [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='drift_time',Save=Save)
+    PltTime(Time=ch1.TimeStamp,Data=[ch1.GradTime,ch2.GradTime,DriftTime],Legend=['AnodeG','CathodeG','Drift Time G [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='drift_time',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ch1.BaseStd,ch2.BaseStd],Legend=['Anode','Cathode'],Label='Baseline Noise [mV]',XTicks=XTicks,YTicks=2,YRange=[0,10],SaveName='baseline',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ratio],Legend=[''],Label='Charge Collection',YRange=[0,2],XTicks=XTicks,YTicks=0.5,SaveName='ratio',Save=Save)
     # PltWfm(Time=ch1.Time,Data=[ch1.MeanAmp,-1*ch2.MeanAmp],Legend=['Anode','Cathode'],XTicks=100,YTicks=50,SaveName='avg_waveform')
@@ -145,53 +143,51 @@ if __name__ == '__main__':
     StandardPlots(ch1,ch2)
     
     print(" | Time elapsed: ", time.process_time() , "sec")
-   
+    quit() 
+
+    test = []
+    test2 = []
+    space = 50
+    x = np.linspace(0,len(ch1.Amp[0][::space])*space,len(ch1.Amp[0][::space]))
+    for amp in ch1.Amp: 
+        prime = np.gradient(amp[::space])
+        peak = np.where(prime==np.max(prime))[0][0]
+        newx = int(x[peak])
+        test.append(ch1.Time[newx])
+    for amp in ch2.Amp: 
+        prime = np.gradient(amp[::space])
+        peak = np.where(prime==np.min(prime))[0][0]
+        newx = int(x[peak])
+        test2.append(ch2.Time[newx])
+    PltTime(Time=ch1.TimeStamp,Data=[ch1.MaxT,ch2.MaxT,test,test2],Legend=['Anode','Cathode','Anode Grad','Cathode Grad'],Label='Peak Time [$\mu$s]',XTicks=1,YTicks=50,YRange=[0,100],SaveName='drift_time',Save=False)
+    ch1.MaxT = np.array(ch1.MaxT)
+    ch2.MaxT = np.array(ch2.MaxT)
+    print(test)
+    print(test2)
+    quit()
+
+    test = np.array(test)
+    test2 = np.array(test2)
+    print(np.mean(ch1.MaxT-ch2.MaxT), np.mean(test-test2))
+
+    PltTime(Time=ch1.TimeStamp,Data=[ch1.MaxT-ch2.MaxT, test-test2],Legend=['Drift Time','Drift Time Grad'],Label='Peak Time [$\mu$s]',XTicks=1,YTicks=50,YRange=[0,100],SaveName='drift_time',Save=False)
+    plt.show()
+
+
+    quit()
 
     ###### Additional manual analysis and plotting 
-
-
-    # for x in ch2.Amp: 
-
-    #     rel = np.min(ch2.MeanAmp)/np.min(x)
-    #     corr = signal.correlate(x, ch2.MeanAmp/rel, mode='same') / np.sum(x**2)
-    #     fig, (ax_orig, ax_filt, ax_corr) = plt.subplots(3, 1, sharex=True)
-    #     ax_orig.plot(x)
-    #     ax_orig.set_title('Original signal')
-    #     ax_filt.plot(ch2.MeanAmp)
-    #     ax_filt.set_title('Template signal')
-    #     # ax_corr.plot(corr)
-    #     ax_corr.plot(x-ch2.MeanAmp)
-    #     ax_corr.set_title('Auto-correlated')
-    #     ax_orig.margins(0, 0.1)
-    #     fig.tight_layout()
-    #     fig.show()
-    #     raw_input()
-
-    # quit() 
-
-
-
-    # FitFullCurve(ch2, data=ch2.MeanAmp, start=-300, end=500, repeats=5, state=True)
-
-    # PltWfm(Time=ch1.Time,Data=[ch2.Amp[10],ch2.AmpClean[10],ch2.AmpSubtract[10]],Legend=['Raw','Filtered','Bkgd Subtracted'],Label=['Time [HH:MM:SS]','Amplitude [mV]'],YRange=[np.min(ch2.MeanAmp)*1.5,np.max(ch1.MeanAmp)*2.5],XTicks=[20,100],YTicks=[5,20])
-
-    # PltWfm(Time=ch2.Time,Data=list(ch2.Amp),Legend=['Waveforms'],Label=['Time [HH:MM:SS]','Amplitude [mV]'],XTicks=[20,100],YTicks=[5,20],Color='k')
-    # PltWfm(Time=ch1.Time,Data=[ch2.MeanAmp],Legend=['Cathode'],Label=['Time [HH:MM:SS]','Amplitude [mV]'],XTicks=[20,100],YTicks=[5,20])
-    # plt.show() 
-    # XTicks=[300,10]
-    # Legend = ['Anode','Cathode','Ratio x100']
-    # bins = np.linspace(0.6,1.4,40)
-    # ratio = -ch1.Max/ch2.Max
-    # plt.hist(ratio, bins, alpha=0.8, label='Raw', color='red')
-    # plt.axvline(x=np.mean(ratio), linewidth=2, color='red')
-    # test1 = OptimalFilter(ch1.Time, ch1.AmpClean, ch1.Pol)
-    # test2 = OptimalFilter(ch2.Time, ch2.AmpClean, ch2.Pol)
-    # ratiot = test1/test2
-    # plt.hist(ratiot, bins, alpha=0.8, label='Raw', color='blue')
-    # plt.axvline(x=np.mean(ratiot), linewidth=2, color='blue')
-    # plt.show() 
-    # PltTime(Time=ch1.TimeStamp,Data=[test1,test2,ratiot*100],Legend=Legend, Label=['Time [HH:MM:SS]','Amplitude [mV]'],XTicks=XTicks,YTicks=[5,20])
-    # PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,-1*ch2.Max,ratio*100],Legend=Legend, Label=['Time [HH:MM:SS]','Amplitude [mV]'],XTicks=XTicks,YTicks=[5,20])
-    # plt.show()
-
-
+    # dx = ch1.Sampling 
+    # dy = np.diff(ch1.Amp[0])
+    space = 50
+    prime = np.gradient(ch1.Amp[0][::space], 1)
+    prime = prime * np.max(ch1.Amp[0])/np.max(prime)
+    plt.plot(np.linspace(0,len(prime)*space,len(prime)), prime, color='red')
+    plt.plot(ch1.Amp[0])
+    plt.show()
+    plt.close()
+    prime = np.gradient(-ch2.Amp[0][::space], 1)
+    prime = prime * np.max(-ch2.Amp[0])/np.max(prime)
+    plt.plot(np.linspace(0,len(prime)*space,len(prime)), prime, color='red')
+    plt.plot(-ch2.Amp[0])
+    plt.show()

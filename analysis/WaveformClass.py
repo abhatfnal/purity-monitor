@@ -101,6 +101,27 @@ class WFM:
         new = np.subtract(data,fit, where=((self.Time > start) & (self.Time < end)))
         return new
 
+    def FindMaxGradient(self,Data,state=False):
+        if(state): print(" | Calculating gradient along waveform...")
+        Spacing = 50
+        Bins = np.linspace(0,len(self.Time[::Spacing])*Spacing,len(self.Time[::Spacing]))
+        self.GradTime = []
+        for data in Data: 
+            Gradient = np.gradient(data[::Spacing])
+            if(self.Pol==1):
+                MaxGradient = np.where(Gradient==np.max(Gradient[len(Gradient)//2:]))
+            else:
+                MaxGradient = np.where(Gradient==np.min(Gradient[len(Gradient)//2:]))
+            MaxGradientBin = int(Bins[MaxGradient])
+            GradTime = self.Time[MaxGradientBin]
+            if GradTime < 0:
+                print('STOPPP')
+                PltWfm(Time=self.Time,Data=[data],Legend=[''],XTicks=100,YTicks=50,SaveName='test',Save=False)
+                plt.show()
+            self.GradTime.append(self.Time[MaxGradientBin])
+        self.GradTime = np.array(self.GradTime)
+
+
     def GetAverageWfm(self, Data, state=False):
         if(state): print(" | Getting average waveform...")
         self.MeanAmp = np.mean(Data, axis=0)
