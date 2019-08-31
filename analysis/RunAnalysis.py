@@ -18,20 +18,23 @@ def ImportDataFromHDF5(file, channels):
     print(" | Filename...", file)
     Keys = list(f.keys())
     for ch in channels:
+        ch.Amp = []
+        ch.TimeStamp = []
+        ch.Voltages.append(GetVoltageFromName(file))
         ch.Time = np.array(f.get('Time')).flatten() * ch.TScale
         ch.Trigger = np.array(f.get('Trigger')).flatten() * ch.VScale
         Group = f.get(ch.ChName)
         GroupKeys = Group.keys()
-        ch.Files += len(GroupKeys)
-        print(" | Number of files in ch%d...\t" % ch.ID, ch.Files)
+        ch.Files = len(GroupKeys)
+        # print(" | Number of files in ch%d...\t" % ch.ID, ch.Files)
         for key in GroupKeys:
             ch.Amp.append(np.array(Group.get(key)).flatten() * ch.VScale)
             ch.TimeStamp.append(datetime.datetime.strptime((f.attrs['Date']+Group.get(key).attrs["TimeStamp"]).decode('utf-8'), '%Y%m%d%H%M%S'))
         
 def DoAnalysis(channels):
-    Print = True
+    Print = False
     for ii, ch in enumerate(channels):
-        print(" | Processing data in channel %d..." % (ch.ID))
+        # print(" | Processing data in channel %d..." % (ch.ID))
         ch.Amp = np.array(ch.Amp)
         ch.GetSampling()
         ch.SubtractBaseline(state=Print)
@@ -44,6 +47,16 @@ def DoAnalysis(channels):
         ch.FindMaxGradient(Data=ch.AmpClean ,state=Print)
     print(" | Time elapsed: ", time.process_time() , "sec")
 
+def GetVoltageFromName(file):
+    StartChar = file.find('-')
+    EndChar = file.find('V')
+    FirstVoltage = int(file[StartChar+1:EndChar])
+    NewFile = file[EndChar+1:]
+    StartChar = NewFile.find('-')
+    EndChar = NewFile.find('V')
+    SecondVoltage = int(NewFile[StartChar+1:EndChar])
+    TotalVoltage = FirstVoltage + SecondVoltage 
+    return TotalVoltage
 
 def SaveNpy(time, data, filename='test'):
     data = np.column_stack((np.asarray(time), np.asarray(data)))
@@ -62,11 +75,25 @@ def ChooseFilesToAnalyze(arg):
     files = [val for sublist in files for val in sublist]
     return files
 
+def PrintResults(ch1, ch2): 
+    ChargeCollection = - ch1.Max / ch2.Max
+    DriftTime = ch1.GradTime - ch2.GradTime
+    
+    ChargeCollectionMean = np.mean(ChargeCollection)
+    DriftTimeMean = np.mean(DriftTime)
+    LifeTime = - np.mean(DriftTime) / np.log(ChargeCollectionMean)
+
+    ChargeCollectionError = np.std(ChargeCollection)/np.sqrt(len(ChargeCollection) )
+    DriftTimeError = np.std(DriftTime)
+    LifeTimeErr = np.sqrt( pow(DriftTimeError/np.log(ChargeCollectionMean), 2) + pow(DriftTimeMean * ChargeCollectionError / ( pow(np.log(ChargeCollectionMean),2) * ChargeCollectionMean), 2) )   
+
+    print("%.2f,%.3f,%.2f,%.1f,%.3f,%.1f" % (DriftTimeMean, ChargeCollectionMean, LifeTime, DriftTimeError, ChargeCollectionError, LifeTimeErr ) ) 
+
 def StandardPlots(ch1, ch2):
-    print(" | Plotting data...")
+    # print(" | Plotting data...")
 
     ch1.TimeStamp = np.array(ch1.TimeStamp)
-    good =  np.where(ch1.BaseStd<10)
+    good =  np.where(ch1.BaseStd<15)
 
     ch1.Max = ch1.Max[good]
     ch2.Max = ch2.Max[good]
@@ -83,17 +110,18 @@ def StandardPlots(ch1, ch2):
     ch1.TimeStamp = ch1.TimeStamp[good]
 
     ratio = -ch1.Max/ch2.Max
-
+    PrintResults(ch1, ch2)
     # DriftTime = ch1.MaxT - ch2.MaxT + 25
     DriftTime = ch1.GradTime-ch2.GradTime
     print(" | Drift Time...", np.mean(DriftTime), np.std(DriftTime))
     print(" | Charge collection...", np.mean(ratio), np.std(ratio), np.std(ratio)/np.sqrt(len(ratio)))
     print(" | Lifetime...", -np.mean(DriftTime)/np.log(np.mean(ratio)), 'us')
-    
-    print(" | Drift Time...", np.median(DriftTime), np.std(DriftTime))
-    print(" | Charge collection...", np.median(ratio), np.std(ratio), np.std(ratio)/np.sqrt(len(ratio)))
-    print(" | Lifetime...", -np.median(DriftTime)/np.log(np.median(ratio)), 'us')
-    print(" | Time elapsed: ", time.process_time() , "sec")
+
+    # print("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f" % (np.mean(DriftTime), np.mean(ratio), -np.mean(DriftTime)/np.log(np.mean(ratio)), np.std(DriftTime)), np.std(ratio)/np.sqrt(len(ratio)))) )
+    # print(" | Drift Time...", np.median(DriftTime), np.std(DriftTime))
+    # print(" | Charge collection...", np.median(ratio), np.std(ratio), np.std(ratio)/np.sqrt(len(ratio)))
+    # print(" | Lifetime...", -np.median(DriftTime)/np.log(np.median(ratio)), 'us')
+    # print(" | Time elapsed: ", time.process_time() , "sec")
 
     DiffMinute = int((np.max(ch1.TimeStamp) - np.min(ch1.TimeStamp)).seconds/60.0 + 0.5)
     XTicks = int((DiffMinute/12.0 + 0.5))+1
@@ -104,9 +132,9 @@ def StandardPlots(ch1, ch2):
     if Save:
         if not os.path.exists(SavePath+Date):
             os.makedirs(SavePath+Date)
-    PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,-1*ch2.Max,ratio*100],Legend=['Anode','Cathode','Charge Collection [\%]'],Label='Amplitude [mV]',XTicks=XTicks,YTicks=50,SaveName='amp_ratio',Save=Save)
+    # PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,-1*ch2.Max,ratio*100],Legend=['Anode','Cathode','Charge Collection [\%]'],Label='Amplitude [mV]',XTicks=XTicks,YTicks=50,SaveName='amp_ratio',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ch1.MaxT,ch2.MaxT,DriftTime],Legend=['Anode','Cathode','Drift Time [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='drift_time',Save=Save)
-    PltTime(Time=ch1.TimeStamp,Data=[ch1.GradTime,ch2.GradTime,DriftTime],Legend=['AnodeG','CathodeG','Drift Time G [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='drift_time',Save=Save)
+    # PltTime(Time=ch1.TimeStamp,Data=[ch1.GradTime,ch2.GradTime,DriftTime],Legend=['AnodeG','CathodeG','Drift Time G [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='drift_time',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ch1.BaseStd,ch2.BaseStd],Legend=['Anode','Cathode'],Label='Baseline Noise [mV]',XTicks=XTicks,YTicks=2,YRange=[0,10],SaveName='baseline',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ratio],Legend=[''],Label='Charge Collection',YRange=[0,2],XTicks=XTicks,YTicks=0.5,SaveName='ratio',Save=Save)
     # PltWfm(Time=ch1.Time,Data=[ch1.MeanAmp,-1*ch2.MeanAmp],Legend=['Anode','Cathode'],XTicks=100,YTicks=50,SaveName='avg_waveform')
@@ -133,14 +161,22 @@ if __name__ == '__main__':
 
     ###### Import data from HDF5 file.
     files = ChooseFilesToAnalyze(arg)
+    
     for file in files:
+        print(file)
+        GetVoltageFromName(file)
         ImportDataFromHDF5(file, channels)
+        DoAnalysis(channels)
+        PrintResults(ch1, ch2)
+        # StandardPlots(ch1,ch2)
+    quit()
 
     ###### Basic analysis: baseline subtraction, waveform averaging, obtaining fourier spectra, frequency bandpass filter and finding extrema.
     DoAnalysis(channels)
 
     ###### Plotting and saving standard plots for the analysis 
-    StandardPlots(ch1,ch2)
+    PrintResults(ch1, ch2)
+    # StandardPlots(ch1,ch2)
     
     print(" | Time elapsed: ", time.process_time() , "sec")
     quit() 
