@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib
 import os, time, datetime, glob
 import matplotlib.pyplot as plt
+import csv
 import argparse
 from matplotlib.ticker import MultipleLocator
 from decimal import Decimal
@@ -9,9 +10,13 @@ from matplotlib.dates import DateFormatter
 from scipy.optimize import curve_fit
 from scipy.stats import chisquare
 
+# Save all measurements in an hdf5 file to speed everything up
+
 now = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 RGAPath = '/home/fas/david_moore/sjb93'
 SaveName = RGAPath+"/rga_"+now+".pdf" 
+DataSavePath = '/home/fas/david_moore/sjb93/project'
+DataSaveName = DataSavePath+"/oxygenpp_"+now+".csv"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", type=str, action="store", dest="filepath", nargs="*")
@@ -26,15 +31,15 @@ def GetPartialPressure(data, Dict):
     GXeDensity = 0.005761 # g/ml
     XeDensityRatio = LXeDensity/GXeDensity
     CellVolumeRatio = 0.8/2.3 
-    print " | Leak Rate:   ", LeakRate, "mbar L/min"
-    print " | Printing concentration of gases..."
-    print " | ", 'M [u]', '\t', 'P [mbar]', '\t', 'Conc [%]', '\t', 'ppb', '\t\t', 'Name'
+    print(" | Leak Rate:   ", LeakRate, "mbar L/min")
+    print(" | Printing concentration of gases...")
+    print(" | ", 'M [u]', '\t', 'P [mbar]', '\t', 'Conc [%]', '\t', 'ppb', '\t\t', 'Name')
     for ii,x in enumerate(Dict.keys()):
         Dict[x]['PumpSpeed'] = Dict[x]['PumpSpeed']*60 #convert to min
         y = data[ii]*Dict[x]['PumpSpeed']
         y = y/LeakRate/(XeDensityRatio*CellVolumeRatio)
         y2 = y*Dict[x]['Mass']/136.0*1e9
-        print " | ", Dict[x]['Mass'], '\t', '%.2E'%Decimal(data[ii]), '\t', '%.2E'%Decimal(y), '\t', '%.2E'%Decimal(y2), '\t', x
+        print(" | ", Dict[x]['Mass'], '\t', '%.2E'%Decimal(data[ii]), '\t', '%.2E'%Decimal(y), '\t', '%.2E'%Decimal(y2), '\t', x)
 
 def GetDictionary():
     #Pump speed is based on https://shop.edwardsvacuum.com/Viewers/Document.ashx?id=2129&lcid=2057
@@ -93,7 +98,7 @@ def PlotOverTime(time, data, files):
     # ax.xaxis.set_minor_locator(MultipleLocator(1))
     ax.set_yscale('log')
     plt.gcf().autofmt_xdate()
-    print str(time[0])[-2:]
+    print(str(time[0])[-2:])
     if str(time[0])[-2:] == 'AM' or str(time[0])[-2:] == 'PM':
         formatter = DateFormatter('%b_%d_%Y__%I-%M-%S_%p')
     else: 
@@ -143,7 +148,7 @@ def PlotBestFitOverTime(time,data,files):
     for ii,x in enumerate(data): 
         plt.scatter(timet, x, label=label[ii], color = colors[ii])
     for ii,x in enumerate(data): 
-        param, pcov = curve_fit(func, timet, x, p0=(1E-6,1E-6,1E-6))
+        param, pcov = curve_fit(func, timet, x, p0=(1E-8,1E-8,1E-8), maxfev=1000000)
         xsquared = chisquare(x,func(timet,*param),axis = None)
         print(str(label3[ii]) + str(param) + " chi squared value = " + str(xsquared) + "\n")
         plt.plot(timet, func(timet, *param), label=label2[ii], color = colors[ii])
@@ -180,7 +185,7 @@ if __name__ == '__main__':
         pressure = []
         ppressure = []
         
-        print " | Analyzing file:   ", x 
+        print(" | Analyzing file:   ", x)
         file = open(x, "r")
         path, filename = os.path.split(x)
         #print filename[-15:-7]
@@ -197,7 +202,7 @@ if __name__ == '__main__':
                 continue
             else: 
                 mass.append(float(line[1:6]))
-                pressure.append(float(line[8:-4])*1.33322) #torr to mbar
+                pressure.append(float(line[8:-3])*1.33322) #torr to mbar, I had to change this line's -4 to a -3 for some reason, the formatting of the files changed?
         mass = np.array(mass)
         pressure = np.array(pressure)
 
@@ -211,7 +216,6 @@ if __name__ == '__main__':
         viton41.append(np.max(peak41))
         peak44 = pressure[np.where((mass>44-0.5) & (mass<44+0.5))]
         viton44.append(np.max(peak44))
-
 
         for x in Dict.keys():
             peak = pressure[np.where((mass>Dict[x]['Mass']-0.5) & (mass<Dict[x]['Mass']+0.5))]
@@ -248,7 +252,12 @@ if __name__ == '__main__':
         plt.savefig(SaveName, bbox_inches='tight', pad_inches=0.2)
 
 
-
+    f = open(DataSaveName, 'a+')
+    writer = csv.writer(f, lineterminator='\n')
+    for x in range(len(time)):
+        row = [time[x], viton32[x]]
+        writer.writerow(row)
+    f.close()
 
 
 
