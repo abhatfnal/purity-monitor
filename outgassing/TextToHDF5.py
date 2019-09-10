@@ -1,9 +1,30 @@
-import h5py, argparse, datetime, os, time
+import h5py, argparse, datetime, os, time, sys, decimal
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--file", type=str, action="store",  dest="input", nargs="*")
 parser.add_argument("-o", "--output", type=str, action="store",  dest="output")
 arg = parser.parse_args()
+
+def ProgressBar(count, total, phrase):
+    rows, columns = os.popen('stty size', 'r').read().split()
+    barLength = 30 # Modify this to change the length of the progress bar
+    status = '%d/%d' % (count+1, total)
+    progress = count/float(total)
+    if isinstance(progress, int):
+        progress = float(progress)
+    if not isinstance(progress, float):
+        progress = 0
+        status = "error: progress var must be float\r\n"
+    if progress < 0:
+        progress = 0
+        status = "Halt...\r\n"
+    if count == total-1:
+        progress = 1
+        status = status+"           \n"
+    block = int(round(barLength*progress))
+    text = '\r%-*s [%s] %-*s %s' % (25,phrase,"#"*block+"-"*(barLength-block),8,'%.2f%%' % decimal.Decimal(progress*100),status)
+    sys.stdout.write(text)
+    sys.stdout.flush()
 
 def ChooseFilesToAnalyze(arg):
     files = []
@@ -21,6 +42,7 @@ if __name__ == '__main__':
     h1 = h5py.File(Outputpath+arg.output, 'w')
     g1 = h1.create_group('Pressure')
     for jj, File in enumerate(Files): 
+        ProgressBar(jj, len(Files), 'Converting txt files')
         f1 = open(File, "r")
         mass = [] 
         pressure = [] 
