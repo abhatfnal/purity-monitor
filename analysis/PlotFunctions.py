@@ -73,16 +73,13 @@ def PltWfm(Time,Data,Legend,Label=['Time [$\mu$s]', 'Amplitude [mV]'],XRange=0,Y
         plt.ylim(YRange[0],YRange[1])
     for ii,signal in enumerate(Data):
         if Color == '':
-            plt.plot(Time, signal, color=colors[ii],linewidth=2.0)
+            plt.plot(Time, signal, label=Legend[ii], color=colors[ii],linewidth=2.0)
         if Color == 'k': 
-            plt.plot(Time, signal, color='black',linewidth=1.0)
+            plt.plot(Time, signal, label='', color='black',linewidth=1.0)
     ax.legend(loc='upper right',fontsize=16)
-    plt.legend(Legend)
     fig.tight_layout()
     plt.margins(0,0)
     if Save:
-        if not os.path.exists(SavePath+Date):
-            os.makedirs(SavePath+Date)
         plt.savefig(SavePath+Date+'/'+Save+'.pdf',bbox_inches='tight')
 
 def PltAllWfm(Time,Data,Legend,Label=['Time [$\mu$s]', 'Amplitude [a.u.]'],XRange=0,YRange=0,XTicks=0,YTicks=0,Color='',Save=''):

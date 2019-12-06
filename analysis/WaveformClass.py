@@ -112,7 +112,7 @@ class WFM:
         self.GradTime = []
         for data in Data: 
             Gradient = np.gradient(data[::Spacing])
-            MaxGradient = np.where(Gradient==np.max(Gradient[len(Gradient)//2:]))
+            MaxGradient = np.where(Gradient==np.max(Gradient[len(Gradient)//2:len(Gradient)*3//5]))
             MaxGradientBin = int(Bins[MaxGradient])
             GradTime = self.Time[MaxGradientBin]
             if GradTime < 0:
@@ -137,7 +137,7 @@ class WFM:
         self.MaxT = []
         if(state): print(" | Getting extrema of individual files...")
         for i in range(np.sum(self.Files)):
-            self.Max.append(np.max(data[i,self.FindTimeBin(20):]))
+            self.Max.append(np.max(data[i,self.FindTimeBin(20):self.FindTimeBin(100)]))
             self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])[0][0]])
         self.Max = np.array(self.Max)
         self.MaxT = np.array(self.MaxT)
