@@ -11,12 +11,18 @@ plt.rcParams.update(params)
 
 colors = ['#1f78b4', '#e66101', '#33a02c', '#984ea3', '#F27781', '#18298C', '#04BF8A', '#F2CF1D', '#F29F05', '#7155D9', '#8D07F6', '#9E91F2', '#F29B9B', '#F25764', '#6FB7BF', '#B6ECF2', '#5D1314', '#B3640F']
 
-def func(x, a, b, c):
-    return a * np.exp(-x/b) + c
+def func(x, a, b, c, d):
+    return a * np.exp(-(x-c)/b) +d
 
-def PlotBestFitOverTime(Time, Data):
-    End = 5000
-    fig = plt.figure(figsize=(12.4,7))
+def FitExponential(Time, Data, Range):
+    Cut = (Time > Range[0]) & (Time < Range[1])
+    X = Time[Cut]
+    Y = Data[Cut]
+    p, pcov = curve_fit(func, X, Y, p0=(1E-5,40, 5, 1E-5), maxfev=1000000)
+    return [X, func(X, *p), r'$%.1e\cdot e^{-\frac{t-%.3f}{%.3f}} + %.3e$' % (p[0],p[2],p[1],p[3]), p, pcov]
+
+def PlotBestFitOverTime(Time, Data, XRange=0, YRange=0, Fit=None):
+    fig = plt.figure(figsize=(10,7))
     ax = fig.gca()
     ax.grid(b=True, which='major', color='k', linestyle='--')
     ax.grid(b=True, which='minor', color='grey', linestyle=':')
@@ -26,27 +32,32 @@ def PlotBestFitOverTime(Time, Data):
     ax.xaxis.set_major_locator(MultipleLocator(5))
     ax.xaxis.set_minor_locator(AutoMinorLocator(5))
     plt.xlabel('Time [hours]', fontsize=14)
-    plt.ylabel('Pressure [mbar]', fontsize=14)
-    timet = [datetime.datetime.strptime(x, "%Y%m%d%H%M%S") for x in Time]
-    timet = np.array([datetime.timedelta.total_seconds(x-timet[0]) for x in timet])
-    timet = timet/3600.0
+    plt.ylabel(r'Outgassing Rate [mbar$\,\cdot\,$Liter/s]', fontsize=14)
+    if XRange == 0:    
+        XMin = np.min([np.min(x) for x in Time])
+        XMax = np.max([np.max(x) for x in Time])
+        plt.xlim(XMin, XMax)
+    else: 
+        print('test')
+        plt.xlim(XRange[0], XRange[1]) 
+    if YRange == 0:    
+        plt.ylim(1E-10, 1E-5)
+    else: 
+        plt.ylim(YRange[0], YRange[1]) 
 
-    ttime = timet[:End]
-    plt.xlim(ttime[0], ttime[-1])
-    plt.ylim(1E-8, 1E-6)
-    
-    for ii, key in enumerate(Data.keys()): 
-        if key is not 'Oxygen': 
-            pass  
-        else:
-            data = Data[key][:End]
-            plt.plot(ttime, data, label=key, color = colors[ii], linewidth=1.0)
-            p, pcov = curve_fit(func, ttime, data, p0=(1E-8,1,1E-8), maxfev=1000000)
-            xsquared = chisquare(data,func(ttime,*p), axis = None)
-            # print(str(label3[ii]) + str(param) + " chi squared value = " + str(xsquared) + "\n")
-            plt.plot(ttime, func(ttime, *p), label=r'$%.1e\cdot\exp(-t/%.2f)+%.1e$' % (p[0],p[1],p[2]), color = colors[ii], linestyle='--')
+    for jj, (x,y) in enumerate(zip(Time,Data)):
+        for ii, key in enumerate(y.keys()): 
+            if key not in ['Oxygen', 'Nitrogen','Carbondioxide']: 
+                pass  
+            else:
+                if jj==1:
+                    plt.plot(x, y[key], label='Background', color = colors[jj], linewidth=1.0)
+                else:
+                    plt.plot(x, y[key], label=key, color = colors[ii], linewidth=1.0)
+    if Fit is not None:
+        plt.plot(Fit[0], Fit[1], label=Fit[2], color = 'red', ls='-')
     plt.legend(loc='upper right', prop={'size': 14}, ncol=1)
-
+    fig.tight_layout()
 
 def PlotRGASpectrum(Time, Mass, Pressure, Dict, ArrowPos): 
     fig = plt.figure(figsize=(12,7))
@@ -71,24 +82,117 @@ def PlotRGASpectrum(Time, Mass, Pressure, Dict, ArrowPos):
     # plt.legend(loc='upper right', prop={'size': 14}, numpoints=1)
     fig.tight_layout()
 
-
-def PlotOverTime(Time, Data):
-    fig = plt.figure(figsize=(12.4,7))
+def PlotOverTimeRelative(Time, Data, XRange=0, YRange=0):
+    fig = plt.figure(figsize=(10,7))
     ax = fig.gca()
     ax.grid(b=True, which='major', color='k', linestyle='--')
     ax.grid(b=True, which='minor', color='grey', linestyle=':')
     ax.set_yscale('log')
-    plt.gcf().autofmt_xdate()
-    formatter = DateFormatter('%b %d %H:%M')
-    plt.gcf().axes[0].xaxis.set_major_formatter(formatter)
     plt.xticks(fontsize = 14)
     plt.yticks(fontsize = 14)
-    plt.xlabel('Time', fontsize=14)
-    plt.ylabel('Pressure [mbar]', fontsize=14)
-    timet = [datetime.datetime.strptime(x, "%Y%m%d%H%M%S") for x in Time]
-    plt.xlim(timet[0], timet[-1])
-    plt.ylim(1E-10, 1E-4)
-    for key in Data.keys(): 
-        plt.plot(timet, Data[key], label=key)
+    ax.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+    plt.xlabel('Time [hours]', fontsize=14)
+    plt.ylabel('Partial Pressure [mbar]', fontsize=14)
+    if XRange == 0:    
+        XMin = np.min([np.min(x) for x in Time])
+        XMax = np.max([np.max(x) for x in Time])
+        plt.xlim(XMin, XMax)
+    else: 
+        plt.xlim(XRange[0], XRange[1]) 
+    if YRange == 0:    
+        plt.ylim(1E-10, 1E-5)
+    else: 
+        plt.ylim(YRange[0], YRange[1]) 
+
+    for jj, (x,y) in enumerate(zip(Time,Data)):
+        for ii, key in enumerate(y.keys()): 
+            if key not in ['Oxygen', 'Nitrogen','Carbondioxide']: 
+                pass  
+            else:
+                if jj==1:
+                    plt.plot(x, y[key], label='Background', color = colors[jj], linewidth=1.0)
+                else:
+                    plt.plot(x, y[key], label=key, color = colors[ii], linewidth=1.0)
+    plt.legend(loc='upper right', prop={'size': 14}, ncol=1)
+    fig.tight_layout()
+
+
+def PlotOverTimeAbsolut(Time,Data, XRange=0, YRange=0): 
+    fig = plt.figure(figsize=(10,7))
+    ax = fig.gca()
+    ax.grid(b=True, which='major', color='k', linestyle='--')
+    ax.grid(b=True, which='minor', color='grey', linestyle=':')
+    ax.set_yscale('log')
+    plt.xticks(fontsize = 14)
+    plt.yticks(fontsize = 14)
+    # ax.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+    plt.gcf().autofmt_xdate()
+    formatter = DateFormatter('%H:%M:%S')
+    plt.gcf().axes[0].xaxis.set_major_formatter(formatter)
+
+    plt.xlabel('Time [HH:MM:SS]', fontsize=14)
+    plt.ylabel('Partial Pressure [mbar]', fontsize=14)
+    # print(Time)
+    print(np.shape(Time))
+    print(np.shape(Data))
+    # quit()
+    if XRange == 0:    
+        XMin = np.min([np.min(x) for x in Time])
+        XMax = np.max([np.max(x) for x in Time])
+        plt.xlim(XMin, XMax)
+    else: 
+        plt.xlim(XRange[0], XRange[1]) 
+    if YRange == 0:    
+        plt.ylim(1E-10, 1E-5)
+    else: 
+        plt.ylim(YRange[0], YRange[1]) 
+
+    for jj, (x,y) in enumerate(zip(Time,Data)):
+        for ii, key in enumerate(y.keys()): 
+            if key not in ['Oxygen', 'Nitrogen','Carbondioxide', 'Water']: 
+                pass  
+            else:
+                if jj==1:
+                    plt.plot(x, y[key], label='Background', color = colors[jj], linewidth=1.0)
+                else:
+                    plt.plot(x, y[key], label=key, color = colors[ii], linewidth=1.5)
+    plt.legend(loc='upper right', prop={'size': 14}, ncol=1)
+    fig.tight_layout()
+
+
+    # fig = plt.figure(figsize=(12.4,7))
+    # ax = fig.gca()
+    # ax.grid(b=True, which='major', color='k', linestyle='--')
+    # ax.grid(b=True, which='minor', color='grey', linestyle=':')
+    # ax.set_yscale('log')
+    
+    # plt.xticks(fontsize = 14)
+    # plt.yticks(fontsize = 14)
+    # plt.xlabel('Time', fontsize=14)
+    # plt.ylabel('Pressure [mbar]', fontsize=14)
+    # timet = [datetime.datetime.strptime(x, "%Y%m%d%H%M%S") for x in Time]
+    # plt.xlim(timet[0], timet[-1])
+    # plt.ylim(1E-10, 1E-4)
+    # for key in Data.keys(): 
+    #     plt.plot(timet, Data[key], label=key)
+    # plt.legend(loc='upper left', prop={'size': 14}, ncol=4)
+    # fig.tight_layout()
+
+def PlotScatter(X, Y, Labels=[], XRange=[], YRange=[], Legend=[]):
+    fig = plt.figure(figsize=(10,8))
+    ax = fig.gca()
+    ax.grid(b=True, which='major', color='k', linestyle='--')
+    ax.grid(b=True, which='minor', color='grey', linestyle=':')
+    plt.xticks(fontsize = 14)
+    plt.yticks(fontsize = 14)
+    plt.xlabel(Labels[0], fontsize=14)
+    plt.ylabel(Labels[1], fontsize=14)
+    plt.xlim(XRange[0], XRange[1])
+    # plt.ylim(YRange[0], YRange[1])
+    for ii, (x,y) in enumerate(zip(X,Y)):
+        plt.scatter(x,y, label=Legend[ii], color=colors[ii])
+
     plt.legend(loc='upper left', prop={'size': 14}, ncol=4)
     fig.tight_layout()

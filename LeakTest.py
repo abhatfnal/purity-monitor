@@ -33,22 +33,27 @@ if __name__ == '__main__':
         time = []
         pressure = []
         file = open(x, "r")
-        print " | Analyzing file:   ", x 
+        print(" | Analyzing file:   ", x )
         path, filename = os.path.split(x)
         for ii, line in enumerate(file):
             if(ii<23):
                 continue
             else: 
-                time.append(float(line[0:4]))
-                pressure.append(float(line[8:])*1.33322) # convert torr to mbar 
+                data = line.split(',')
+                # print(ii,data)
+                if float(data[1])*1.33322 > 0: 
+                    time.append(float(data[0]))
+                    pressure.append(float(data[1])*1.33322)
+                # time.append(float(line[0:4]))*1.33322)
+                # pressure.append(float(line[8:])*1.33322) # convert torr to mbar 
         time = np.array(time)
         pressure = np.array(pressure)
 
-        plt.plot(time, pressure, label=filename, linewidth=1.5)
+        plt.plot(time[::10], pressure[::10], label=filename, linewidth=1.5)
 
     ax.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=4, borderaxespad=0, fontsize=12)
     plt.xlim(0, np.max(time))  
-    plt.ylim(1e-11,)
+    plt.ylim(1E-12,1E-8)
     if(arg.save): 
         plt.savefig(SaveName, bbox_inches='tight', pad_inches=0.2)
     plt.show()

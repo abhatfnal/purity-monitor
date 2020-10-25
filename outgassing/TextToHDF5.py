@@ -39,6 +39,7 @@ def ChooseFilesToAnalyze(arg):
 if __name__ == '__main__':
     Files = ChooseFilesToAnalyze(arg)
     Outputpath = '/project/fas/david_moore/zl423/PurityData/Outgassing/'
+    # Outputpath = '/home/fas/david_moore/aj487/purity_monitor/outgassing/'
     h1 = h5py.File(Outputpath+arg.output, 'w')
     g1 = h1.create_group('Pressure')
     for jj, File in enumerate(Files): 
@@ -46,21 +47,24 @@ if __name__ == '__main__':
         f1 = open(File, "r")
         mass = [] 
         pressure = [] 
-        for ii, line in enumerate(f1): 
-            if ii < 6: 
-                pass 
-            if ii > 5 and ii < 20: 
-                data = line.split(',')
-                h1.attrs[u'%s' % data[0]] = data[1]
-            if ii > 21:
-                data = line.split(',')
-                mass.append(float(data[0]))
-                pressure.append(float(data[1]))
-        path, filename = os.path.split(File)
-        if('AM' in filename or 'PM' in filename): 
-            dt = datetime.datetime.strptime(filename, '%b_%d_%Y__%I-%M-%S_%p.txt')
-            do = datetime.datetime.strftime(dt, "%Y%m%d%H%M%S")
-        g1.create_dataset(do,data=pressure)
+        try:
+            for ii, line in enumerate(f1): 
+                if ii < 6: 
+                    pass 
+                if ii > 5 and ii < 20: 
+                    data = line.split(',')
+                    h1.attrs[u'%s' % data[0]] = data[1]
+                if ii > 21:
+                    data = line.split(',')
+                    mass.append(float(data[0]))
+                    pressure.append(float(data[1]))
+            path, filename = os.path.split(File)
+            if('AM' in filename or 'PM' in filename): 
+                dt = datetime.datetime.strptime(filename, '%b_%d_%Y__%I-%M-%S_%p.txt')
+                do = datetime.datetime.strftime(dt, "%Y%m%d%H%M%S")
+            g1.create_dataset(do,data=pressure)
+        except: 
+            continue 
     h1.create_dataset('Mass',data=mass)
     h1.close()
     print("Time elapsed: ", time.process_time() , "sec")

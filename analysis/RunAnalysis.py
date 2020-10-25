@@ -37,7 +37,7 @@ def DoAnalysis(channels):
         ch.TimeStamp = np.array(ch.TimeStamp)
         ch.GetSampling()
         ch.SubtractBaseline(state=Print)
-        ch.RemoveNoise(LowCut=1E0, HighCut=5E4, Order=3, state=Print)
+        ch.RemoveNoise(LowCut=1E1, HighCut=5E4, Order=3, state=Print)
         ch.GetAllMaxima(data=ch.AmpClean, state=Print)
         ch.FindMaxGradient(Data=ch.AmpClean ,state=Print)
         # ch.ApplyCut(Cut=np.where(channels[0].BaseStd<10), state=Print)
@@ -125,7 +125,7 @@ def StandardPlots(ch1, ch2):
 
     SavePath = '/home/fas/david_moore/aj487/purity_monitor/plots/analysis/'
     Date = datetime.datetime.now().strftime("%Y%m%d")
-    Save = False 
+    Save = True 
     if Save:
         if not os.path.exists(SavePath+Date):
             os.makedirs(SavePath+Date)
@@ -133,13 +133,13 @@ def StandardPlots(ch1, ch2):
 
 
 
-    PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,ch2.Max,ChargeCollection*100],Legend=['Anode','Cathode','Charge Collection [\%]'],Label='Amplitude [mV]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='amp_ratio',Save=Save)
-    PltTime(Time=ch1.TimeStamp,Data=[ch1.GradTime,ch2.GradTime,DriftTime],Legend=['Anode','Cathode','Drift Time [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=50,YRange=[0,350],SaveName='drift_time',Save=Save)
+    PltTime(Time=ch1.TimeStamp,Data=[ch1.Max,ch2.Max,ChargeCollection*100],Legend=['Anode','Cathode','Charge Collection [\%]'],Label='Amplitude [mV]',XTicks=XTicks,YTicks=500,YRange=[0,3000],SaveName='amp_ratio',Save=Save)
+    # PltTime(Time=ch1.TimeStamp,Data=[ch1.GradTime,ch2.GradTime,DriftTime],Legend=['Anode','Cathode','Drift Time [$\mu$s]'],Label='Peak Time [$\mu$s]',XTicks=XTicks,YTicks=1,YRange=[0,15],SaveName='drift_time',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ch1.BaseStd,ch2.BaseStd],Legend=['Anode','Cathode'],Label='Baseline Noise [mV]',XTicks=XTicks,YTicks=2,YRange=[0,20],SaveName='baseline',Save=Save)
     # PltTime(Time=ch1.TimeStamp,Data=[ChargeCollection],Legend=[''],Label='Charge Collection',YRange=[0,2],XTicks=XTicks,YTicks=0.5,SaveName='ratio',Save=Save)
     # PltWfm(Time=ch1.Time,Data=[x+100*ii for ii,x in enumerate(ch2.Amp)],Legend=['Anode','Cathode'],XTicks=100,YTicks=200,YRange=[-50,2600],Color='k',SaveName='avg_waveform')
     # PltWfm(Time=ch2.Time,Data=[x+100*ii for ii,x in enumerate(ch2.Amp)],Legend=['Anode','Cathode'],XTicks=100,YTicks=200,YRange=[-50,2600],Color='k',SaveName='avg_waveform')
-    PltWfm(Time=ch1.Time,Data=[ch1.MeanAmp,ch2.MeanAmp],Legend=['Anode','Cathode'],XTicks=100,YTicks=10,SaveName='avg_waveform')
+    # PltWfm(Time=ch1.Time,Data=[ch1.MeanAmp,ch2.MeanAmp],Legend=['Anode','Cathode'],XTicks=100,YTicks=50,SaveName='avg_waveform',Save=Save)
     # PltWfm(Time=ch1.Time,Data=list(ch1.AmpClean),Legend=['Anode','Cathode'],XTicks=100,YTicks=50,SaveName='avg_waveform',Color='k')
     # PltAllWfm(Time=ch2.Time,Data=list(ch1.Amp),Legend=[''],XTicks=100,YTicks=50,Save='all_waveform',Color='k')
     

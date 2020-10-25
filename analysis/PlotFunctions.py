@@ -12,7 +12,7 @@ plt.rcParams.update(params)
 
 colors = ['#1f78b4', '#e66101', '#33a02c', '#984ea3']
 
-def PltTime(Time,Data,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,SaveName='',Save=False):
+def PltTime(Time,Data,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,SaveName='',Title='',Save=False):
     fig = plt.figure(figsize=(8,6))
     ax = fig.gca()
     ax.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(5))
@@ -38,6 +38,7 @@ def PltTime(Time,Data,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,SaveName=
     for ii, yy in enumerate(Data):
         plt.plot(Time, yy, 'o', label=Legend[ii], color=colors[ii], marker='o', mew=0.01, markersize=4)
     plt.legend(loc='lower left',bbox_to_anchor=(0.005,0.92), ncol=3, borderaxespad=0, fontsize=14)
+    plt.title(Title)
     fig.tight_layout()
     if Save:
         plt.savefig(SavePath+Date+'/'+SaveName+'.pdf',bbox_inches='tight')
@@ -76,11 +77,14 @@ def PltWfm(Time,Data,Legend,Label=['Time [$\mu$s]', 'Amplitude [mV]'],XRange=0,Y
             plt.plot(Time, signal, label=Legend[ii], color=colors[ii],linewidth=2.0)
         if Color == 'k': 
             plt.plot(Time, signal, label='', color='black',linewidth=1.0)
-    ax.legend(loc='upper right',fontsize=16)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    if by_label: 
+        ax.legend(loc='upper right',fontsize=16)
     fig.tight_layout()
     plt.margins(0,0)
     if Save:
-        plt.savefig(SavePath+Date+'/'+Save+'.pdf',bbox_inches='tight')
+        plt.savefig(SavePath+Date+'/'+SaveName+'.pdf',bbox_inches='tight')
 
 def PltAllWfm(Time,Data,Legend,Label=['Time [$\mu$s]', 'Amplitude [a.u.]'],XRange=0,YRange=0,XTicks=0,YTicks=0,Color='',Save=''):
     fig = plt.figure(figsize=(16,9))
