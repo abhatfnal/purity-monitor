@@ -9,12 +9,13 @@ from MatchedFilter import MatchedFilter
 
 class WFM:
     def __init__(self, ID, Pol, VScale = "m", TScale = "u"):
+        self.NameDict = {1:'Anode', -1:'Cathode'}
         self.TimeStamp = []
         self.ID = ID
-        self.ChName = 'ch%d' % self.ID
-        self.Files = []
-        self.counter = 0
         self.Pol = Pol
+        self.ChName = 'ch%d' % self.ID
+        self.Name = self.NameDict[self.Pol]
+        self.Files = []
         self.Samples = 0
         self.Sampling = 0
         self.BaseCounts = 2500
@@ -35,9 +36,6 @@ class WFM:
         self.Plot = False
         self.Integral = []
         self.Voltages = []
-
-    def count(self):
-        self.counter = self.counter + 1
 
     def Scale(self, units):
         if(units=="n"): return 1000000000.0
@@ -178,7 +176,7 @@ class WFM:
         result = np.convolve(data, gaussian, mode="same")
         return result.tolist()
 
-
-
+    def GetBaselineNoise(self, Data):
+        self.BaselineNoise = [np.sqrt(np.mean(data[:self.FindTimeBin(-100)]**2)) for data in Data] 
 
 

@@ -42,6 +42,7 @@ def DoAnalysis(channels):
         ch.FindMaxGradient(Data=ch.AmpClean ,state=Print)
         # ch.ApplyCut(Cut=np.where(channels[0].BaseStd<10), state=Print)
         ch.GetAverageWfm(Data=ch.AmpClean, state=Print)
+        ch.GetBaselineNoise(Data=ch.AmpClean, state=Print)
     print(" | Time elapsed: ", time.process_time() , "sec")
 
 def GetVoltageFromName(file):
@@ -151,6 +152,8 @@ def StandardPlots(ch1, ch2):
     else: 
         plt.close('all')
 
+def InitializeChannels(NumChannels, Pol=1):
+    return [Wvf.WFM(ID=ii, Pol=(-1)**ii*Pol) for ii in NumChannels]
 
 if __name__ == '__main__':
     ###### Initialize class object for each channel.
