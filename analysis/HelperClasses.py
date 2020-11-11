@@ -51,10 +51,10 @@ class Dataset:
         self.Selection = Selection
         self.Pol = Pol 
         self.Ch = self.InitializeChannels(self.NumChannels, self.Pol)
-        self.Files = []
+        self.Files = glob.glob(self.Path+self.Selection)
 
     def RunStandardAnalysis(self): 
-        self.Files = self.ChooseFilesToAnalyze(self.Path)
+        # self.Files = self.ChooseFilesToAnalyze(self.Path)
         for File in self.Files: 
             self.ImportDataFromHDF5(File, self.Ch)
         self.DoAnalysis(self.Ch)
@@ -65,8 +65,8 @@ class Dataset:
     def InitializeChannels(self, NumChannels=2, Pol=1):
         return [Wvf.WFM(ID=ii, Pol=(-1)**ii*-1*Pol) for ii in range(1,NumChannels+1)]
     
-    def ChooseFilesToAnalyze(self, Path):
-        return glob.glob(Path+self.Selection)
+    # def ChooseFilesToAnalyze(self, Path):
+    #     return 
 
     def ImportDataFromHDF5(self, File, channels):
         f = h5py.File(File, 'r')  
@@ -118,8 +118,8 @@ class Dataset:
             
             h,hx,hp = plt.hist(self.Ch[ii].BaselineNoise, bins=np.arange(0.0,20.0,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
             plt.axvline(np.mean(self.Ch[ii].BaselineNoise), color=Plt.colors[ii])
-            rectangle = plt.Rectangle(xy=(np.mean(self.Ch[ii].BaselineNoise)-np.std(self.Ch[ii].BaselineNoise),0), 
-                                    width=2*np.std(self.Ch[ii].BaselineNoise), 
+            rectangle = plt.Rectangle(xy=(np.mean(self.Ch[ii].BaselineNoise)-np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)),0), 
+                                    width=2*np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)), 
                                     height=10000, 
                                     fc=Plt.colors[ii],
                                     ec=Plt.colors[ii], 
@@ -136,6 +136,7 @@ class Dataset:
         YMax = np.max([np.max(self.Ch[ii].Max) for ii in range(self.NumChannels)])
         YMax = self.RoundUpToNext(YMax, 100)
         YTicks = self.RoundDownToNext(YMax/5, 100)
+        print(YTicks)
         Plt.PltTime(Time=self.Ch[0].TimeStamp,
                     Data=[self.Ch[0].Max, self.Ch[1].Max, self.ChargeCollection*100],
                     Legend=['Anode','Cathode','Charge Collection [\%]'],
