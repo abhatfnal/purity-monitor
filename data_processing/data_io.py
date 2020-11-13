@@ -3,13 +3,13 @@ import os
 import pandas as pd
 
 def read_rga_outs(filepath):
-    """Reads in all '.rga_out' files in filepath as RGA data output files and returns the data as a pandas DataFrame.
+    """Reads in all '.txt' files in filepath as RGA data output files and returns the data as a pandas DataFrame.
     
     Keyword arguments:
     filepath -- the path to the folder containing RGA text files
     """
     files = os.listdir(filepath)
-    files = [value for value in files if value.endswith(".rga_out")]
+    files = [value for value in files if value.endswith(".txt")]
     blocks = []
 
     for filename in files:
@@ -17,12 +17,12 @@ def read_rga_outs(filepath):
         rga_times = []
         atomic_masses = []
         partial_pressures = []
-        with open(filename, 'r') as f:
+        with open(filepath + filename, 'r') as f:
 
             for idx, line in enumerate(f):
 
                 if idx == 0:
-                    rga_time = datetime.datetime.strptime(line.rstrip("\n"), "%B %d, %Y  %I:%M:%S %p")
+                    rga_time = datetime.datetime.strptime(line.rstrip("\n"), "%b %d, %Y  %I:%M:%S %p")
 
                 elif idx > 21:
                     line = line.replace(" ", "").rstrip(",\n")
