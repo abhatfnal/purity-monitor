@@ -1,38 +1,81 @@
-import datetime
+from datetime import datetime as dt
 import os
 import pandas as pd
+import glob
+import zipfile
+import numpy as np
 
-def read_rga_outs(filepath):
-    """Reads in all '.txt' files in filepath as RGA data output files and returns the data as a pandas DataFrame.
+
+class DataIO:
+    def __init__(self, Path):
+        self.Path = Path
+        self.ZipDir = self.Path+'RGA/'
     
-    Keyword arguments:
-    filepath -- the path to the folder containing RGA text files
-    """
-    files = os.listdir(filepath)
-    files = [value for value in files if value.endswith(".txt")]
-    blocks = []
+    def Unzip(self): 
+        File = glob.glob(self.Path+'*.zip')[0]
+        if os.path.exists(self.ZipDir):
+            pass
+        else:
+            os.makedirs(self.ZipDir)
+            with zipfile.ZipFile(File, 'r') as zip_ref:
+                zip_ref.extractall(self.ZipDir)
+        self.RGAFiles = glob.glob(self.ZipDir+'*.txt')
+    
+    def RemoveZipDir(self):
+        for File in self.RGAFiles:
+            os.remove(File)
+        os.rmdir(self.ZipDir)
+   
 
-    for filename in files:
+    def GetRGAData(self, Size=-1, Path=None):
+        """Reads in all '.rga_out' files in filepath as RGA data output files and returns the data as a pandas DataFrame."""
 
-        rga_times = []
-        atomic_masses = []
-        partial_pressures = []
-        with open(filepath + filename, 'r') as f:
+        if Path == None: 
+            pass
+        else: 
+            self.Path = Path
+            self.Unzip 
 
-            for idx, line in enumerate(f):
+        RGAData = []
+        for ii,File in enumerate(self.RGAFiles):
+            RGAWaveform = pd.read_csv(File, sep=",", header=None, skiprows=22, usecols=[1,2])
+            RGAWaveform.columns = ["Mass", "Pressure"]
 
-                if idx == 0:
-                    rga_time = datetime.datetime.strptime(line.rstrip("\n"), "%b %d, %Y  %I:%M:%S %p")
+            RGATime = np.sum(pd.read_csv(File, nrows=0).columns.values)
+            RGATime = dt.strptime(RGATime, "%b %d %Y  %I:%M:%S %p")
 
-                elif idx > 21:
-                    line = line.replace(" ", "").rstrip(",\n")
-                    atomic_mass, partial_pressure = line.split(",")
-                    rga_times.append(rga_time)
-                    atomic_masses.append(float(atomic_mass))
-                    partial_pressures.append(float(partial_pressure))
+            RGAScan = pd.DataFrame(data=[RGATime, RGAWaveform.to_numpy()[:,0], RGAWaveform.to_numpy()[:,1]]).T
+            RGAScan.columns = ['Datetime', 'Mass', 'Pressure']
+            RGAData.append(RGAScan)
+            
+            if ii == Size:
+                break
 
-        data_block = pd.DataFrame(data=[rga_times, atomic_masses, partial_pressures]).T
-        data_block.columns = ['Datetime', 'Mass_amu', 'Partial_Pressure_torr']
-        blocks.append(data_block)
+        return pd.concat(RGAData, ignore_index=True)
 
-    return pd.concat(blocks)
+    def GetTemperatureData(self, Path=None):
+        if Path == None:
+            pass
+        else:
+            self.Path = Path
+
+        self.TempFiles = glob.glob(self.Path+'*.csv')
+        TempData = []
+        for File in self.TempFiles: 
+            RawTempData = pd.read_csv(File, sep=",", header=None, skiprows=1, usecols=[1,2,4,7])
+            RawTempData.columns = ['Date', 'Time', 'CH1', 'CH2']
+            RawTempData['Datetime'] = [dt.strptime("%s %s" % (x,y), "%Y/%m/%d  %H:%M:%S") for x,y in zip(RawTempData['Date'], RawTempData['Time'])]
+            RawTempData.drop(['Date', 'Time'], axis=1)
+            RawTempData.drop(RawTempData[RawTempData['CH1'] == 'Time out'].index, inplace = True)
+            RawTempData.drop(RawTempData[RawTempData['CH2'] == 'Time out'].index, inplace = True)
+
+            TempData.append(RawTempData)
+        return pd.concat(TempData, ignore_index=True)
+
+
+if __name__ == "__main__":
+    Path = '/project/david_moore/aj487/Data_WL110/Outgassing_Setup/20201014/'
+    IO = DataIO(Path)
+    IO.Unzip()
+    Data = IO.GetRGAData(Size=100)
+    Temp = IO.GetTemperatureData()
