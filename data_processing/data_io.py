@@ -19,7 +19,7 @@ class DataIO:
             os.makedirs(self.ZipDir)
             with zipfile.ZipFile(File, 'r') as zip_ref:
                 zip_ref.extractall(self.ZipDir)
-        self.RGAFiles = glob.glob(self.ZipDir+'*.txt')
+        self.RGAFiles = glob.glob(self.ZipDir+'/RGA/*.txt')
     
     def RemoveZipDir(self):
         for File in self.RGAFiles:
@@ -28,9 +28,9 @@ class DataIO:
    
 
     def GetRGAData(self, Size=-1, Path=None):
-        """Reads in all '.rga_out' files in filepath as RGA data output files and returns the data as a pandas DataFrame."""
+        """Reads in all '.txt' files in filepath as RGA data output files and returns the data as a pandas DataFrame."""
 
-        if Path == None: 
+        if Path == None:
             pass
         else: 
             self.Path = Path
@@ -38,13 +38,13 @@ class DataIO:
 
         RGAData = []
         for ii,File in enumerate(self.RGAFiles):
-            RGAWaveform = pd.read_csv(File, sep=",", header=None, skiprows=22, usecols=[1,2])
+            RGAWaveform = pd.read_csv(File, sep=",", header=None, skiprows=22, usecols=[0,1])
             RGAWaveform.columns = ["Mass", "Pressure"]
 
             RGATime = np.sum(pd.read_csv(File, nrows=0).columns.values)
             RGATime = dt.strptime(RGATime, "%b %d %Y  %I:%M:%S %p")
 
-            RGAScan = pd.DataFrame(data=[RGATime, RGAWaveform.to_numpy()[:,0], RGAWaveform.to_numpy()[:,1]]).T
+            RGAScan = pd.DataFrame(data=[[RGATime for i in range(RGAWaveform.shape[0])], RGAWaveform['Mass'], RGAWaveform['Pressure']]).T
             RGAScan.columns = ['Datetime', 'Mass', 'Pressure']
             RGAData.append(RGAScan)
             
@@ -64,7 +64,7 @@ class DataIO:
         for File in self.TempFiles: 
             RawTempData = pd.read_csv(File, sep=",", header=None, skiprows=1, usecols=[1,2,4,7])
             RawTempData.columns = ['Date', 'Time', 'CH1', 'CH2']
-            RawTempData['Datetime'] = [dt.strptime("%s %s" % (x,y), "%Y/%m/%d  %H:%M:%S") for x,y in zip(RawTempData['Date'], RawTempData['Time'])]
+            RawTempData['Datetime'] = [dt.strptime("%s %s" % (x,y), "%m/%d/%Y  %H:%M:%S") for x,y in zip(RawTempData['Date'], RawTempData['Time'])]
             RawTempData.drop(['Date', 'Time'], axis=1)
             RawTempData.drop(RawTempData[RawTempData['CH1'] == 'Time out'].index, inplace = True)
             RawTempData.drop(RawTempData[RawTempData['CH2'] == 'Time out'].index, inplace = True)
