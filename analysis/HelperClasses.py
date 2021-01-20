@@ -132,11 +132,13 @@ class Dataset:
         plt.legend(loc='upper right')
         fig.tight_layout()
 
-    def ShowAmplitudeVsTime(self, Channel=-1): 
-        YMax = np.max([np.max(self.Ch[ii].Max) for ii in range(self.NumChannels)])
-        YMax = self.RoundUpToNext(YMax, 100)
-        YTicks = self.RoundDownToNext(YMax/5, 100)
-        print(YTicks)
+    def ShowAmplitudeVsTime(self, Channel=-1, YTicks=100, YMax=None): 
+        if YMax is None: 
+            YMax = np.max([np.max(self.Ch[ii].Max) for ii in range(self.NumChannels)])
+#         YMax = self.RoundUpToNext(YMax, 100)
+#         print('Max: ', YMax)
+#         YTicks = self.RoundDownToNext(YMax/5, 10)
+        print('Ticks: ', YTicks)
         Plt.PltTime(Time=self.Ch[0].TimeStamp,
                     Data=[self.Ch[0].Max, self.Ch[1].Max, self.ChargeCollection*100],
                     Legend=['Anode','Cathode','Charge Collection [\%]'],
@@ -145,7 +147,7 @@ class Dataset:
                     YTicks=YTicks,
                     YRange=[0,YMax],
                     SaveName='amp_ratio',
-                    Title='Charge Collection in Vacuum at 60 V/cm',
+                    Title='',
                     Save=False)
 
     def ShowDrifttimeVsTime(self, Channel=-1): 
@@ -153,7 +155,7 @@ class Dataset:
         YMax = self.RoundUpToNext(YMax, 10)
         YTicks = self.RoundDownToNext(YMax/5, 1)
         Plt.PltTime(Time=self.Ch[0].TimeStamp,
-                    Data=[self.Ch[0].GradTime, self.Ch[1].GradTime, self.Ch[1].GradTime - self.Ch[0].GradTime],
+                    Data=[self.Ch[0].GradTime, self.Ch[1].GradTime, self.Ch[0].GradTime - self.Ch[1].GradTime],
                     Legend=['Anode','Cathode','Drift Time'],
                     Label='Time since Trigger [$\mu$s]',
                     XTicks=self.XTicks,
