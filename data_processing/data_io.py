@@ -19,7 +19,7 @@ class DataIO:
             os.makedirs(self.ZipDir)
             with zipfile.ZipFile(File, 'r') as zip_ref:
                 zip_ref.extractall(self.ZipDir)
-        self.RGAFiles = glob.glob(self.ZipDir+'/RGA/*.txt')
+        self.RGAFiles = glob.glob(self.ZipDir+'/*.txt')
     
     def RemoveZipDir(self):
         for File in self.RGAFiles:
@@ -44,7 +44,8 @@ class DataIO:
             RGATime = np.sum(pd.read_csv(File, nrows=0).columns.values)
             RGATime = dt.strptime(RGATime, "%b %d %Y  %I:%M:%S %p")
 
-            RGAScan = pd.DataFrame(data=[[RGATime for i in range(RGAWaveform.shape[0])], RGAWaveform['Mass'], RGAWaveform['Pressure']]).T
+            RGAScan = pd.DataFrame(data=[[RGATime for i in range(RGAWaveform.shape[0])], RGAWaveform['Mass']]).T
+            RGAScan['Pressure'] = RGAWaveform['Pressure']
             RGAScan.columns = ['Datetime', 'Mass', 'Pressure']
             RGAData.append(RGAScan)
             
@@ -62,9 +63,9 @@ class DataIO:
         self.TempFiles = glob.glob(self.Path+'*.csv')
         TempData = []
         for File in self.TempFiles: 
-            RawTempData = pd.read_csv(File, sep=",", header=None, skiprows=1, usecols=[1,2,4,7])
+            RawTempData = pd.read_csv(File, sep="\t", header=None, skiprows=12, usecols=[1,2,4,7])
             RawTempData.columns = ['Date', 'Time', 'CH1', 'CH2']
-            RawTempData['Datetime'] = [dt.strptime("%s %s" % (x,y), "%m/%d/%Y  %H:%M:%S") for x,y in zip(RawTempData['Date'], RawTempData['Time'])]
+            RawTempData['Datetime'] = [dt.strptime("%s %s" % (x,y), "%Y/%m/%d  %H:%M:%S") for x,y in zip(RawTempData['Date'], RawTempData['Time'])]
             RawTempData.drop(['Date', 'Time'], axis=1)
             RawTempData.drop(RawTempData[RawTempData['CH1'] == 'Time out'].index, inplace = True)
             RawTempData.drop(RawTempData[RawTempData['CH2'] == 'Time out'].index, inplace = True)
