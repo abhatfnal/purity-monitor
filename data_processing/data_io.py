@@ -9,7 +9,7 @@ import numpy as np
 class DataIO:
     def __init__(self, Path):
         self.Path = Path
-        self.ZipDir = self.Path+'RGA/'
+        self.ZipDir = self.Path+'/RGA/'
     
     def Unzip(self): 
         File = glob.glob(self.Path+'*.zip')[0]
@@ -19,7 +19,7 @@ class DataIO:
             os.makedirs(self.ZipDir)
             with zipfile.ZipFile(File, 'r') as zip_ref:
                 zip_ref.extractall(self.ZipDir)
-        self.RGAFiles = glob.glob(self.ZipDir+'/*.txt')
+        self.RGAFiles = glob.glob(self.ZipDir+'/RGA/*.txt')
     
     def RemoveZipDir(self):
         for File in self.RGAFiles:
@@ -63,16 +63,15 @@ class DataIO:
         self.TempFiles = glob.glob(self.Path+'*.csv')
         TempData = []
         for File in self.TempFiles: 
-            RawTempData = pd.read_csv(File, sep="\t", header=None, skiprows=12, usecols=[1,2,4,7])
+            RawTempData = pd.read_csv(File, sep=",", header=None, skiprows=1, usecols=[1,2,4,7])
             RawTempData.columns = ['Date', 'Time', 'CH1', 'CH2']
-            RawTempData['Datetime'] = [dt.strptime("%s %s" % (x,y), "%Y/%m/%d  %H:%M:%S") for x,y in zip(RawTempData['Date'], RawTempData['Time'])]
+            RawTempData['Datetime'] = [dt.strptime("%s %s" % (x,y), "%m/%d/%Y  %H:%M:%S") for x,y in zip(RawTempData['Date'], RawTempData['Time'])]
             RawTempData.drop(['Date', 'Time'], axis=1)
             RawTempData.drop(RawTempData[RawTempData['CH1'] == 'Time out'].index, inplace = True)
             RawTempData.drop(RawTempData[RawTempData['CH2'] == 'Time out'].index, inplace = True)
 
             TempData.append(RawTempData)
         return pd.concat(TempData, ignore_index=True)
-
 
 if __name__ == "__main__":
     Path = '/project/david_moore/aj487/Data_WL110/Outgassing_Setup/20201014/'
