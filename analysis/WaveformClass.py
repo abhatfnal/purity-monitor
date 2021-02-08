@@ -69,7 +69,7 @@ class WFM:
         self.Baseline = []
         for i in range(np.sum(self.Files)):
             self.BaseStd.append(np.std(self.Amp[i][:self.FindTimeBin(0)]))
-            self.Baseline.append(np.average(self.Amp[i][self.FindTimeBin(-50):self.FindTimeBin(0)]))
+            self.Baseline.append(np.average(self.Amp[i][self.FindTimeBin(-100):self.FindTimeBin(0)]))
             # self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
             self.Amp[i] = self.Amp[i] - self.Baseline[i]
         self.BaseStd = np.array(self.BaseStd)
@@ -135,7 +135,7 @@ class WFM:
         self.MaxT = []
         if(state): print(" | Getting extrema of individual files...")
         for i in range(np.sum(self.Files)):
-            self.Max.append(np.max(data[i,self.FindTimeBin(20):self.FindTimeBin(100)]))
+            self.Max.append(np.max(data[i,self.FindTimeBin(0):self.FindTimeBin(150)]))
             self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])[0][0]])
         self.Max = np.array(self.Max)
         self.MaxT = np.array(self.MaxT)

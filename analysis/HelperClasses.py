@@ -61,6 +61,7 @@ class Dataset:
         self.ChargeCollection = self.Ch[0].Max / self.Ch[1].Max
         self.DiffMinute = int((np.max(self.Ch[0].TimeStamp) - np.min(self.Ch[0].TimeStamp)).seconds/60.0 + 0.5)
         self.XTicks = int((self.DiffMinute/12.0 + 0.5))+1
+        self.Cut = np.where(self.Ch[0].BaseStd < 5)
 
     def InitializeChannels(self, NumChannels=2, Pol=1):
         return [Wvf.WFM(ID=ii, Pol=(-1)**ii*-1*Pol) for ii in range(1,NumChannels+1)]
@@ -117,8 +118,8 @@ class Dataset:
                 continue
             
             h,hx,hp = plt.hist(self.Ch[ii].BaselineNoise, bins=np.arange(0.0,20.0,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
-            plt.axvline(np.mean(self.Ch[ii].BaselineNoise), color=Plt.colors[ii])
-            rectangle = plt.Rectangle(xy=(np.mean(self.Ch[ii].BaselineNoise)-np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)),0), 
+            plt.axvline(np.median(self.Ch[ii].BaselineNoise), color=Plt.colors[ii])
+            rectangle = plt.Rectangle(xy=(np.median(self.Ch[ii].BaselineNoise)-np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)),0), 
                                     width=2*np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)), 
                                     height=10000, 
                                     fc=Plt.colors[ii],
@@ -139,8 +140,8 @@ class Dataset:
 #         print('Max: ', YMax)
 #         YTicks = self.RoundDownToNext(YMax/5, 10)
         print('Ticks: ', YTicks)
-        Plt.PltTime(Time=self.Ch[0].TimeStamp,
-                    Data=[self.Ch[0].Max, self.Ch[1].Max, self.ChargeCollection*100],
+        Plt.PltTime(Time=self.Ch[0].TimeStamp[self.Cut],
+                    Data=[self.Ch[0].Max[self.Cut], self.Ch[1].Max[self.Cut], self.ChargeCollection[self.Cut]*100],
                     Legend=['Anode','Cathode','Charge Collection [\%]'],
                     Label='Amplitude [mV]',
                     XTicks=self.XTicks,
