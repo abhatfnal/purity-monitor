@@ -61,7 +61,10 @@ class Dataset:
         self.ChargeCollection = self.Ch[0].Max / self.Ch[1].Max
         self.DiffMinute = int((np.max(self.Ch[0].TimeStamp) - np.min(self.Ch[0].TimeStamp)).seconds/60.0 + 0.5)
         self.XTicks = int((self.DiffMinute/12.0 + 0.5))+1
-        self.Cut = np.where(self.Ch[0].BaseStd < 5)
+        self.NoiseCut = 5
+        self.Cut = np.where(self.Ch[0].BaseStd < self.NoiseCut)
+        self.InverseCut = np.where(self.Ch[0].BaseStd > self.NoiseCut)
+
 
     def InitializeChannels(self, NumChannels=2, Pol=1):
         return [Wvf.WFM(ID=ii, Pol=(-1)**ii*-1*Pol) for ii in range(1,NumChannels+1)]
