@@ -61,7 +61,7 @@ class Dataset:
         self.ChargeCollection = self.Ch[0].Max / self.Ch[1].Max
         self.DiffMinute = int((np.max(self.Ch[0].TimeStamp) - np.min(self.Ch[0].TimeStamp)).seconds/60.0 + 0.5)
         self.XTicks = int((self.DiffMinute/12.0 + 0.5))+1
-        self.NoiseCut = 5
+        self.NoiseCut = 50
         self.Cut = np.where(self.Ch[0].BaseStd < self.NoiseCut)
         self.InverseCut = np.where(self.Ch[0].BaseStd > self.NoiseCut)
 
@@ -95,10 +95,11 @@ class Dataset:
             ch.Amp = np.array(ch.Amp)
             ch.TimeStamp = np.array(ch.TimeStamp)
             ch.GetSampling()
+            ch.RemoveNoise(LowCut=1E0, HighCut=5E4, Order=3, state=Print)
             ch.SubtractBaseline(state=Print)
-            ch.RemoveNoise(LowCut=1E1, HighCut=5E4, Order=3, state=Print)
             ch.GetAllMaxima(data=ch.AmpClean, state=Print)
             ch.FindMaxGradient(Data=ch.AmpClean ,state=Print)
+            ch.GetDriftTime(Data=ch.AmpClean)
             # ch.ApplyCut(Cut=np.where(channels[0].BaseStd<10), state=Print)
             ch.GetAverageWfm(Data=ch.AmpClean, state=Print)
             ch.GetBaselineNoise(Data=ch.AmpClean)
@@ -110,9 +111,9 @@ class Dataset:
         self.ShowChargeCollection()
         self.ShowDrifttimeVsTime()
 
-    def ShowBaselineNoise(self, Channel=-1): 
+    def ShowBaselineNoise(self, Channel=-1, BinMax=20): 
         fig = plt.figure(figsize=(8,6))
-        plt.xlim(0,20)
+        plt.xlim(0,BinMax)
         plt.xlabel('Baseline RMS Noise [mV]', fontsize=16)
         plt.ylabel('Counts/bin', fontsize=16)
         histmax = 0
@@ -120,7 +121,7 @@ class Dataset:
             if ii+1 is not Channel and Channel is not -1: 
                 continue
             
-            h,hx,hp = plt.hist(self.Ch[ii].BaselineNoise, bins=np.arange(0.0,20.0,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
+            h,hx,hp = plt.hist(self.Ch[ii].BaselineNoise, bins=np.arange(0.0,BinMax,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
             plt.axvline(np.median(self.Ch[ii].BaselineNoise), color=Plt.colors[ii])
             rectangle = plt.Rectangle(xy=(np.median(self.Ch[ii].BaselineNoise)-np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)),0), 
                                     width=2*np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)), 
@@ -158,8 +159,10 @@ class Dataset:
         YMax = np.max([np.max(self.Ch[ii].GradTime) for ii in range(self.NumChannels)])
         YMax = self.RoundUpToNext(YMax, 10)
         YTicks = self.RoundDownToNext(YMax/5, 1)
-        Plt.PltTime(Time=self.Ch[0].TimeStamp,
-                    Data=[self.Ch[0].GradTime, self.Ch[1].GradTime, self.Ch[0].GradTime - self.Ch[1].GradTime],
+        self.DriftTime = self.Ch[0].GradTime - self.Ch[1].GradTime
+        DriftCut = np.where(self.DriftTime > 0)
+        Plt.PltTime(Time=self.Ch[0].TimeStamp[DriftCut],
+                    Data=[self.Ch[0].DriftTime[DriftCut], self.Ch[1].DriftTime[DriftCut], self.Ch[0].DriftTime[DriftCut] - self.Ch[1].DriftTime[DriftCut]],
                     Legend=['Anode','Cathode','Drift Time'],
                     Label='Time since Trigger [$\mu$s]',
                     XTicks=self.XTicks,

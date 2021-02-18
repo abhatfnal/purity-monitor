@@ -68,10 +68,10 @@ class WFM:
         self.BaseStd = []
         self.Baseline = []
         for i in range(np.sum(self.Files)):
-            self.BaseStd.append(np.std(self.Amp[i][:self.FindTimeBin(0)]))
-            self.Baseline.append(np.average(self.Amp[i][self.FindTimeBin(-100):self.FindTimeBin(0)]))
+            self.BaseStd.append(np.std(self.AmpClean[i][:self.FindTimeBin(0)]))
+            self.Baseline.append(np.average(self.AmpClean[i][self.FindTimeBin(-50):self.FindTimeBin(0)]))
             # self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
-            self.Amp[i] = self.Amp[i] - self.Baseline[i]
+            self.AmpClean[i] = self.AmpClean[i] - self.Baseline[i]
         self.BaseStd = np.array(self.BaseStd)
         self.Baseline = np.array(self.Baseline)
 
@@ -179,4 +179,13 @@ class WFM:
     def GetBaselineNoise(self, Data):
         self.BaselineNoise = [np.sqrt(np.mean(data[:self.FindTimeBin(-100)]**2)) for data in Data] 
 
-
+    def GetDriftTime(self, Data, Threshold=0.1): 
+        self.DriftTime = []
+        for ii,data in enumerate(Data): 
+            if self.Pol == 1:
+                ThresholdVal = (1-Threshold) * self.Max[ii]
+            elif self.Pol == -1: 
+                ThresholdVal = Threshold * self.Max[ii]
+            BinsOverThreshold = np.where(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii])] > ThresholdVal )[0][0]
+            self.DriftTime.append(self.Time[self.FindTimeBin(0)+BinsOverThreshold])
+        self.DriftTime = np.array(self.DriftTime)
