@@ -68,7 +68,7 @@ class WFM:
         self.BaseStd = []
         self.Baseline = []
         for i in range(np.sum(self.Files)):
-            self.BaseStd.append(np.std(self.AmpClean[i][:self.FindTimeBin(0)]))
+            self.BaseStd.append(np.std(self.AmpClean[i][self.FindTimeBin(-900):self.FindTimeBin(-10)]))
             self.Baseline.append(np.average(self.AmpClean[i][self.FindTimeBin(-50):self.FindTimeBin(0)]))
             # self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
             self.AmpClean[i] = self.AmpClean[i] - self.Baseline[i]
@@ -127,7 +127,7 @@ class WFM:
     def GetIntegral(self, Data, state=False):
         if(state): print(" | Getting average waveform...")
         for i in range(np.sum(self.Files)):
-            self.Integral.append(np.sum(Data[i][self.FindTimeBin(0):]))
+            self.Integral.append(np.sum(Data[i][self.FindTimeBin(0):self.FindTimeBin(200)])/100000.0)
         self.Integral = np.array(self.Integral)
         
     def GetAllMaxima(self, data, state=False):
@@ -177,15 +177,18 @@ class WFM:
         return result.tolist()
 
     def GetBaselineNoise(self, Data):
-        self.BaselineNoise = [np.sqrt(np.mean(data[:self.FindTimeBin(-100)]**2)) for data in Data] 
+        self.BaselineNoise = [np.sqrt(np.mean(data[self.FindTimeBin(-900):self.FindTimeBin(-100)]**2)) for data in Data] 
 
     def GetDriftTime(self, Data, Threshold=0.1): 
         self.DriftTime = []
         for ii,data in enumerate(Data): 
             if self.Pol == 1:
-                ThresholdVal = (1-Threshold) * self.Max[ii]
+                ThresholdVal = (1-Threshold+0.05) * self.Max[ii]
             elif self.Pol == -1: 
                 ThresholdVal = Threshold * self.Max[ii]
-            BinsOverThreshold = np.where(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii])] > ThresholdVal )[0][0]
+            try:
+                BinsOverThreshold = np.where(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii])] > ThresholdVal )[0][0]
+            except IndexError as error:
+                print(data[self.FindTimeBin(7):self.FindTimeBin(self.MaxT[ii])], ThresholdVal)
             self.DriftTime.append(self.Time[self.FindTimeBin(0)+BinsOverThreshold])
         self.DriftTime = np.array(self.DriftTime)

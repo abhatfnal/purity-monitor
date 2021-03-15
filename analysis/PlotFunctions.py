@@ -22,8 +22,8 @@ def PltTime(Time,Data,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,SaveName=
 
     ax.grid(b=True, which='major', color='k', linestyle='--', alpha=0.7)
     ax.grid(b=True, which='minor', color='grey', linestyle=':')
-    plt.xlabel('Time [hh:mm:ss]', fontsize=14)
-    plt.ylabel(Label, fontsize=14)
+    plt.xlabel('Time [hh:mm:ss]')
+    plt.ylabel(Label)
 
     plt.xlim(np.min(Time),np.max(Time))
     formatter = matplotlib.dates.DateFormatter('%H:%M:%S')
@@ -37,11 +37,60 @@ def PltTime(Time,Data,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,SaveName=
     
     for ii, yy in enumerate(Data):
         plt.plot(Time, yy, 'o', label=Legend[ii], color=colors[ii], marker='o', mew=0.01, markersize=4)
-    plt.legend(loc='lower left',bbox_to_anchor=(0.005,0.92), ncol=3, borderaxespad=0, fontsize=14)
+    plt.legend(loc='lower left',bbox_to_anchor=(0.005,0.92), ncol=3, borderaxespad=0)
     plt.title(Title)
     fig.tight_layout()
     if Save:
         plt.savefig(SavePath+Date+'/'+SaveName+'.pdf',bbox_inches='tight')
+
+def PltChargeVsTime(Time,Data,CC,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,Title=''):
+    fig,ax = plt.subplots()
+
+    window = 20
+    
+    ax.grid(b=True, which='major', color='k', linestyle='--', alpha=0.5)
+    ax.grid(b=True, which='minor', color='k', linestyle=':', alpha=0.5)
+    ax.yaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(5))
+    ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(YTicks))
+    plt.xlabel('Time [hh:mm:ss]')
+    plt.ylabel(Label)
+
+    plt.xlim(np.min(Time),np.max(Time))
+    formatter = matplotlib.dates.DateFormatter('%H:%M')
+    # ax.xaxis.set_major_formatter(formatter)
+    # plt.gcf().autofmt_xdate()
+    if YRange != 0: 
+        plt.ylim(YRange[0], YRange[1])
+    else:
+        maxY = np.max([np.max(x) for x in Data])
+        plt.ylim(0, maxY*1.2)
+    
+    for ii, yy in enumerate(Data):
+        plt.plot(Time, yy, 'o', label=Legend[ii], color=colors[ii], marker='o', mew=0.01, markersize=3)
+        # plt.plot(Time[:-(window-1)], np.convolve(yy, np.ones(window), 'valid') / window, label=Legend[ii], color=colors[ii], mew=0.01, markersize=4)
+    
+    plt.legend(loc='upper left', bbox_to_anchor=(0.01,0.99), ncol=1, borderaxespad=0)
+    plt.title(Title)
+
+    ax2 = ax.twinx()
+    ax2.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(5))
+    ax2.xaxis.set_major_locator(matplotlib.dates.MinuteLocator(interval=XTicks))
+    ax2.yaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(5))
+    ax2.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(YTicks))
+
+    ax2.xaxis.set_major_formatter(formatter)
+    plt.gcf().autofmt_xdate()
+    plt.ylim(0,160)
+    plt.ylabel('Charge Collection [\%]')
+    ax2.yaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(5))
+    ax2.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(20))
+    plt.plot(Time, CC, 'o', label=Legend[2], color=colors[2], marker='o', mew=0.01, markersize=4)
+    
+    run_av = np.convolve(CC, np.ones(window), 'valid') / window
+    print(len(run_av))
+    print(len(CC))
+    # plt.plot(Time[:-(window-1)], run_av, label=Legend[2], color=colors[2], mew=0.01, markersize=4)
+    plt.legend(loc='upper right',bbox_to_anchor=(0.99,0.99), ncol=1, borderaxespad=0)
 
 def PltScatter(xvalue, yvalue, legend, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
     fig = plt.figure(figsize=(6,5))
@@ -80,7 +129,7 @@ def PltWfm(Time,Data,Legend,Label=['Time [$\mu$s]', 'Amplitude [mV]'],XRange=0,Y
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     if by_label: 
-        ax.legend(loc='upper right',fontsize=16)
+        ax.legend(loc='upper right')
     fig.tight_layout()
     plt.margins(0,0)
     if Save:

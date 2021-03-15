@@ -61,7 +61,7 @@ class Dataset:
         self.ChargeCollection = self.Ch[0].Max / self.Ch[1].Max
         self.DiffMinute = int((np.max(self.Ch[0].TimeStamp) - np.min(self.Ch[0].TimeStamp)).seconds/60.0 + 0.5)
         self.XTicks = int((self.DiffMinute/12.0 + 0.5))+1
-        self.NoiseCut = 50
+        self.NoiseCut = 5
         self.Cut = np.where(self.Ch[0].BaseStd < self.NoiseCut)
         self.InverseCut = np.where(self.Ch[0].BaseStd > self.NoiseCut)
 
@@ -95,11 +95,12 @@ class Dataset:
             ch.Amp = np.array(ch.Amp)
             ch.TimeStamp = np.array(ch.TimeStamp)
             ch.GetSampling()
-            ch.RemoveNoise(LowCut=1E0, HighCut=5E4, Order=3, state=Print)
+            ch.RemoveNoise(LowCut=1E-5, HighCut=5E5, Order=3, state=Print)
             ch.SubtractBaseline(state=Print)
             ch.GetAllMaxima(data=ch.AmpClean, state=Print)
             ch.FindMaxGradient(Data=ch.AmpClean ,state=Print)
             ch.GetDriftTime(Data=ch.AmpClean)
+            ch.GetIntegral(Data=ch.AmpClean, state=Print)
             # ch.ApplyCut(Cut=np.where(channels[0].BaseStd<10), state=Print)
             ch.GetAverageWfm(Data=ch.AmpClean, state=Print)
             ch.GetBaselineNoise(Data=ch.AmpClean)
@@ -114,17 +115,17 @@ class Dataset:
     def ShowBaselineNoise(self, Channel=-1, BinMax=20): 
         fig = plt.figure(figsize=(8,6))
         plt.xlim(0,BinMax)
-        plt.xlabel('Baseline RMS Noise [mV]', fontsize=16)
-        plt.ylabel('Counts/bin', fontsize=16)
+        plt.xlabel('Baseline RMS Noise [mV]')
+        plt.ylabel('Counts/bin')
         histmax = 0
         for ii in range(self.NumChannels):
             if ii+1 is not Channel and Channel is not -1: 
                 continue
             
-            h,hx,hp = plt.hist(self.Ch[ii].BaselineNoise, bins=np.arange(0.0,BinMax,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
-            plt.axvline(np.median(self.Ch[ii].BaselineNoise), color=Plt.colors[ii])
-            rectangle = plt.Rectangle(xy=(np.median(self.Ch[ii].BaselineNoise)-np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)),0), 
-                                    width=2*np.std(self.Ch[ii].BaselineNoise)/np.sqrt(len(self.Ch[ii].BaselineNoise)), 
+            h,hx,hp = plt.hist(self.Ch[ii].BaseStd, bins=np.arange(0.0,BinMax,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
+            plt.axvline(np.median(self.Ch[ii].BaseStd), color=Plt.colors[ii])
+            rectangle = plt.Rectangle(xy=(np.median(self.Ch[ii].BaseStd)-np.std(self.Ch[ii].BaseStd)/np.sqrt(len(self.Ch[ii].BaseStd)),0), 
+                                    width=2*np.std(self.Ch[ii].BaseStd)/np.sqrt(len(self.Ch[ii].BaseStd)), 
                                     height=10000, 
                                     fc=Plt.colors[ii],
                                     ec=Plt.colors[ii], 
@@ -140,23 +141,31 @@ class Dataset:
     def ShowAmplitudeVsTime(self, Channel=-1, YTicks=100, YMax=None): 
         if YMax is None: 
             YMax = np.max([np.max(self.Ch[ii].Max) for ii in range(self.NumChannels)])
-#         YMax = self.RoundUpToNext(YMax, 100)
-#         print('Max: ', YMax)
-#         YTicks = self.RoundDownToNext(YMax/5, 10)
-        print('Ticks: ', YTicks)
-        Plt.PltTime(Time=self.Ch[0].TimeStamp[self.Cut],
-                    Data=[self.Ch[0].Max[self.Cut], self.Ch[1].Max[self.Cut], self.ChargeCollection[self.Cut]*100],
-                    Legend=['Anode','Cathode','Charge Collection [\%]'],
+        Plt.PltChargeVsTime(Time=self.Ch[0].TimeStamp[self.Cut],
+                    Data=[self.Ch[0].Max[self.Cut], self.Ch[1].Max[self.Cut]],
+                    CC=self.ChargeCollection[self.Cut]*100,
+                    Legend=['Anode','Cathode','Charge Collection'],
                     Label='Amplitude [mV]',
                     XTicks=self.XTicks,
                     YTicks=YTicks,
                     YRange=[0,YMax],
-                    SaveName='amp_ratio',
-                    Title='',
-                    Save=False)
+                    Title='')
 
-    def ShowDrifttimeVsTime(self, Channel=-1): 
-        YMax = np.max([np.max(self.Ch[ii].GradTime) for ii in range(self.NumChannels)])
+    def ShowIntegralVsTime(self, Channel=-1, YTicks=100, YMax=None): 
+        if YMax is None: 
+            YMax = np.max([np.max(self.Ch[ii].Integral) for ii in range(self.NumChannels)])
+        Plt.PltChargeVsTime(Time=self.Ch[0].TimeStamp[self.Cut],
+                    Data=[self.Ch[0].Integral[self.Cut], self.Ch[1].Integral[self.Cut]],
+                    CC=self.Ch[0].Integral[self.Cut]/self.Ch[1].Integral[self.Cut]*100,
+                    Legend=['Anode','Cathode','Charge Collection'],
+                    Label='Integral [a.u.]',
+                    XTicks=self.XTicks,
+                    YTicks=YTicks,
+                    YRange=[0,YMax],
+                    Title='')
+
+    def ShowDrifttimeVsTime(self, YMax=0, Channel=-1): 
+        YMax = np.max([np.max(self.Ch[ii].DriftTime) for ii in range(self.NumChannels)])
         YMax = self.RoundUpToNext(YMax, 10)
         YTicks = self.RoundDownToNext(YMax/5, 1)
         self.DriftTime = self.Ch[0].GradTime - self.Ch[1].GradTime
@@ -185,8 +194,8 @@ class Dataset:
         plt.xlim(XMin, self.RoundUpToNext(np.max(self.ChargeCollection), 1))
         plt.ylim(0, self.RoundUpToNext(np.max(h), 10))
 
-        plt.xlabel('Charge Collection', fontsize=16)
-        plt.ylabel('Counts/bin', fontsize=16)
+        plt.xlabel('Charge Collection')
+        plt.ylabel('Counts/bin')
         plt.axvline(Mean, color='red', )
         plt.title('Charge Collection = %.4f ± %.4f' % (Mean, Err))
         rectangle = plt.Rectangle((Mean-Err,0), 2*Err, 10000, fc='red',ec="red", alpha=0.2, fill=True,)
