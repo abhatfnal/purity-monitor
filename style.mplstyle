@@ -1,0 +1,21 @@
+axes.titlesize : 16
+axes.labelsize : 16
+lines.linewidth : 2
+lines.markersize : 10
+xtick.labelsize : 16
+ytick.labelsize : 16
+font.family : serif
+figure.figsize: 8,6
+figure.dpi : 100
+savefig.dpi : 300
+savefig.bbox : tight
+legend.fontsize : 12
+legend.loc : upper left
+errorbar.capsize : 5
+mathtext.fontset: cm
+mathtext.rm : serif
+axes.autolimit_mode : round_numbers
+axes.xmargin : 0
+axes.ymargin : 0
+text.usetex: True
+axes.prop_cycle : cycler('color', ['1f78b4', 'e66101', '33a02c', '984ea3', 'F27781', '18298C', '04BF8A', 'F2CF1D', 'F29F05', '7155D9', '8D07F6', '9E91F2', 'F29B9B', 'F25764', '6FB7BF', 'B6ECF2', '5D1314', 'B3640F'])
