@@ -30,7 +30,7 @@ class SensorData:
         if Selection is None: 
             for ii,Label in enumerate(self.Labels):
                 if Label == 'Time':
-                    self.Seconds = [(x - self.RefTime - 14400 - 3600) for x in self.RawData[:,15]]
+                    self.Seconds = [(x - self.RefTime - 14400) for x in self.RawData[:,15]]
                     self.Time = [self.DateTime + datetime.timedelta(seconds=x) for x in self.Seconds]
                 else:
                     self.Data[Label] = self.RawData[:,self.Index[ii]]
