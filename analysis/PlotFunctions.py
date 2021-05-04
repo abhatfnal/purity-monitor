@@ -87,8 +87,6 @@ def PltChargeVsTime(Time,Data,CC,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=
     plt.plot(Time, CC, 'o', label=Legend[2], color=colors[2], marker='o', mew=0.01, markersize=4)
     
     run_av = np.convolve(CC, np.ones(window), 'valid') / window
-    print(len(run_av))
-    print(len(CC))
     # plt.plot(Time[:-(window-1)], run_av, label=Legend[2], color=colors[2], mew=0.01, markersize=4)
     plt.legend(loc='upper right',bbox_to_anchor=(0.99,0.99), ncol=1, borderaxespad=0)
 

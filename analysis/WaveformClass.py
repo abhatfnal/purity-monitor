@@ -2,13 +2,15 @@ import numpy as np
 from scipy.fftpack import fft
 from scipy.signal import butter, lfilter, sosfilt
 from scipy.optimize import curve_fit
+import scipy
+from scipy.special import erfc
 
 from PlotFunctions import *
 from FitFunctions import * 
 from MatchedFilter import MatchedFilter 
 
 class WFM:
-    def __init__(self, ID, Pol, VScale = "m", TScale = "u"):
+    def __init__(self, ID, Pol, VScale="m", TScale="u"):
         self.NameDict = {1:'Anode', -1:'Cathode'}
         self.TimeStamp = []
         self.ID = ID
@@ -16,8 +18,6 @@ class WFM:
         self.ChName = 'ch%d' % self.ID
         self.Name = self.NameDict[self.Pol]
         self.Files = []
-        self.Samples = 0
-        self.Sampling = 0
         self.BaseCounts = 2500
         self.Amp = []
         self.AmpClean = []
@@ -31,8 +31,8 @@ class WFM:
         self.MaxT = []
         self.AmpFFT = []
         self.TimeFFT = []
-        self.VScale = self.Scale(units = VScale)
-        self.TScale = self.Scale(units = TScale)
+        self.VScale = self.Scale(units=VScale)
+        self.TScale = self.Scale(units=TScale)
         self.Plot = False
         self.Integral = []
         self.Voltages = []
@@ -59,21 +59,23 @@ class WFM:
 
     def GetSampling(self, state=False):
         if(state): print(" | Get sampling...")
-        self.Sampling = self.TScale/abs(self.Time[0]-self.Time[1])
         self.Samples = len(self.Time)
-
-    def SubtractBaseline(self, state=False):
+        self.TotalTime = self.Time[-1]-self.Time[0]
+        self.Sampling = 1.0/(self.TotalTime/self.TScale/self.Samples)
+        
+    def SubtractBaseline(self, Data, state=False):
         if(state): print(" | Subtracting baseline...")
         self.BaseCounts = self.FindTimeBin(-50)
         self.BaseStd = []
         self.Baseline = []
-        for i in range(np.sum(self.Files)):
-            self.BaseStd.append(np.std(self.AmpClean[i][self.FindTimeBin(-900):self.FindTimeBin(-10)]))
-            self.Baseline.append(np.average(self.AmpClean[i][self.FindTimeBin(-50):self.FindTimeBin(0)]))
+        for ii,data in enumerate(Data):
+            self.BaseStd.append(np.std(data[self.FindTimeBin(-900):self.FindTimeBin(-10)]))
+            self.Baseline.append(np.average(data[self.FindTimeBin(-50):self.FindTimeBin(0)]))
             # self.Baseline.append(np.average(self.Amp[i][:self.BaseCounts]))
-            self.AmpClean[i] = self.AmpClean[i] - self.Baseline[i]
+            Data[ii] -= self.Baseline[ii]
         self.BaseStd = np.array(self.BaseStd)
         self.Baseline = np.array(self.Baseline)
+        return Data
 
     def ApplyCut(self, Cut, state=False):
         Cut = Cut[0]
@@ -103,7 +105,7 @@ class WFM:
         new = np.subtract(data,fit, where=((self.Time > start) & (self.Time < end)))
         return new
 
-    def FindMaxGradient(self,Data,state=False):
+    def FindMaxGradient(self, Data, state=False):
         if(state): print(" | Calculating gradient along waveform...")
         Spacing = 50
         Bins = np.linspace(0,len(self.Time[::Spacing])*Spacing,len(self.Time[::Spacing]))
@@ -120,23 +122,19 @@ class WFM:
             self.GradTime.append(self.Time[MaxGradientBin])
         self.GradTime = np.array(self.GradTime)
 
-    def GetAverageWfm(self, Data, state=False):
-        if(state): print(" | Getting average waveform...")
-        self.MeanAmp = np.mean(Data, axis=0)
-
     def GetIntegral(self, Data, state=False):
         if(state): print(" | Getting average waveform...")
         for i in range(np.sum(self.Files)):
             self.Integral.append(np.sum(Data[i][self.FindTimeBin(0):self.FindTimeBin(200)])/100000.0)
         self.Integral = np.array(self.Integral)
         
-    def GetAllMaxima(self, data, state=False):
+    def GetAllMaxima(self, Data, state=False):
         self.Max = []
         self.MaxT = []
         if(state): print(" | Getting extrema of individual files...")
-        for i in range(np.sum(self.Files)):
-            self.Max.append(np.max(data[i,self.FindTimeBin(0):self.FindTimeBin(150)]))
-            self.MaxT.append(self.Time[np.where(data[i]==self.Max[i])[0][0]])
+        for ii,data in enumerate(Data):
+            self.Max.append(np.max(data[self.FindTimeBin(0):self.FindTimeBin(150)]))
+            self.MaxT.append(self.Time[np.where(data==self.Max[ii])[0][0]])
         self.Max = np.array(self.Max)
         self.MaxT = np.array(self.MaxT)
 
@@ -147,14 +145,16 @@ class WFM:
         for i in range(np.sum(self.Files)):
             self.AmpFFT.append(np.abs(fft(self.Amp[i])[1:self.Samples//2]).tolist())
 
-    def RemoveNoise(self,LowCut, HighCut, Order, state=False):
-        self.AmpClean = [] 
+    def RemoveNoise(self, Data, HighPass, state=False):
         if(state): print(" | Removing noise...")
-        for i in range(np.sum(self.Files)):
-            self.AmpClean.append(self.butter_bandpass_filter(self.Amp[i], LowCut, HighCut, self.Sampling, Order))
-        self.AmpClean = np.array(self.AmpClean)
+        CutOff = HighPass/(self.Sampling/2.0)
+        b, a = scipy.signal.butter(3, CutOff, 'lowpass')
+        for ii,data in enumerate(Data):
+            Data[ii] = scipy.signal.lfilter(b, a, data)
+            # Data[ii] = self.butter_bandpass_filter(data, LowCut, HighCut, self.Sampling, Order)
+        return Data
 
-    def butter_bandpass(self, lowcut, highcut, fs, order=5):
+    def butter_bandpass(self, lowcut, highcut, fs, order=3):
         nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
@@ -163,7 +163,7 @@ class WFM:
 
     def butter_bandpass_filter(self, data, lowcut, highcut, fs, order=5):
         sos = self.butter_bandpass(lowcut, highcut, fs, order=order)
-        y = sosfilt(sos, data)
+        y = sosfilter(sos, data)
         return y
 
     def RemoveNoiseSingle(self, data, LowCut, HighCut, Order):
@@ -189,6 +189,17 @@ class WFM:
             try:
                 BinsOverThreshold = np.where(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii])] > ThresholdVal )[0][0]
             except IndexError as error:
-                print(data[self.FindTimeBin(7):self.FindTimeBin(self.MaxT[ii])], ThresholdVal)
+                pass
+                # print(data[self.FindTimeBin(7):self.FindTimeBin(self.MaxT[ii])], ThresholdVal)
             self.DriftTime.append(self.Time[self.FindTimeBin(0)+BinsOverThreshold])
         self.DriftTime = np.array(self.DriftTime)
+
+    def func(self,x,Base,V0,sigma,tau,mu):
+        return Base + 0.5*V0 * np.exp(0.5 * (sigma/tau)**2 - (x-mu)/tau) * erfc(1/np.sqrt(2) * (sigma/tau - (x-mu)/sigma))
+
+    def RunFit(self, Data): 
+        print(" | Running fits...")
+        self.FitParameters = []
+        for data in Data: 
+            popt, pcov = curve_fit(self.func, self.Time, data, p0=[0, np.max(data), 1, 100, 4])
+            self.FitParameters.append(popt)

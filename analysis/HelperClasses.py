@@ -61,7 +61,7 @@ class Dataset:
         self.ChargeCollection = self.Ch[0].Max / self.Ch[1].Max
         self.DiffMinute = int((np.max(self.Ch[0].TimeStamp) - np.min(self.Ch[0].TimeStamp)).seconds/60.0 + 0.5)
         self.XTicks = int((self.DiffMinute/12.0 + 0.5))+1
-        self.NoiseCut = 5
+        self.NoiseCut = 50
         self.Cut = np.where(self.Ch[0].BaseStd < self.NoiseCut)
         self.InverseCut = np.where(self.Ch[0].BaseStd > self.NoiseCut)
 
@@ -86,24 +86,25 @@ class Dataset:
             for key in GroupKeys:
                 ch.Amp.append(np.array(Group.get(key)).flatten() * ch.VScale * ch.Pol)
                 ch.TimeStamp.append(datetime.datetime.strptime((f.attrs['Date']+Group.get(key).attrs["TimeStamp"]).decode('utf-8'), '%Y%m%d%H%M%S'))
+            
 
     def DoAnalysis(self, channels):
     ###### Basic analysis: baseline subtraction, waveform averaging, obtaining fourier spectra, frequency bandpass filter and finding extrema.
         Print = False 
         for ii, ch in enumerate(channels):
             print(" | Processing data in channel %d..." % (ch.ID))
+            ch.GetSampling()
             ch.Amp = np.array(ch.Amp)
             ch.TimeStamp = np.array(ch.TimeStamp)
-            ch.GetSampling()
-            ch.RemoveNoise(LowCut=1E-5, HighCut=5E5, Order=3, state=Print)
-            ch.SubtractBaseline(state=Print)
-            ch.GetAllMaxima(data=ch.AmpClean, state=Print)
-            ch.FindMaxGradient(Data=ch.AmpClean ,state=Print)
-            ch.GetDriftTime(Data=ch.AmpClean)
-            ch.GetIntegral(Data=ch.AmpClean, state=Print)
-            # ch.ApplyCut(Cut=np.where(channels[0].BaseStd<10), state=Print)
-            ch.GetAverageWfm(Data=ch.AmpClean, state=Print)
-            ch.GetBaselineNoise(Data=ch.AmpClean)
+            ch.Amp = ch.SubtractBaseline(Data=ch.Amp, state=Print)
+            ch.Amp = ch.RemoveNoise(Data=ch.Amp, HighPass=100000, state=Print)
+            # ch.RunFit(Data=ch.Amp)
+            ch.GetAllMaxima(Data=ch.Amp, state=Print)
+            # ch.FindMaxGradient(Data=ch.Amp ,state=Print)
+            # ch.GetDriftTime(Data=ch.Amp, Threshold=0.1)
+            # ch.GetIntegral(Data=ch.Amp, state=Print)
+            # ch.GetBaselineNoise(Data=ch.Amp)
+
         print(" | Time elapsed: ", time.process_time() , "sec")
 
     def ShowStandardPlots(self): 
@@ -119,13 +120,13 @@ class Dataset:
         plt.ylabel('Counts/bin')
         histmax = 0
         for ii in range(self.NumChannels):
-            if ii+1 is not Channel and Channel is not -1: 
+            if ii+1 is not Channel and Channel != -1: 
                 continue
             
-            h,hx,hp = plt.hist(self.Ch[ii].BaseStd, bins=np.arange(0.0,BinMax,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
-            plt.axvline(np.median(self.Ch[ii].BaseStd), color=Plt.colors[ii])
-            rectangle = plt.Rectangle(xy=(np.median(self.Ch[ii].BaseStd)-np.std(self.Ch[ii].BaseStd)/np.sqrt(len(self.Ch[ii].BaseStd)),0), 
-                                    width=2*np.std(self.Ch[ii].BaseStd)/np.sqrt(len(self.Ch[ii].BaseStd)), 
+            h,hx,hp = plt.hist(self.Ch[ii].BaseStd[self.Cut], bins=np.arange(0.0,BinMax,0.2), histtype='step', align='mid', lw=2, color=Plt.colors[ii], label=self.Ch[ii].Name)
+            plt.axvline(np.median(self.Ch[ii].BaseStd[self.Cut]), color=Plt.colors[ii])
+            rectangle = plt.Rectangle(xy=(np.median(self.Ch[ii].BaseStd[self.Cut])-np.std(self.Ch[ii].BaseStd[self.Cut])/np.sqrt(len(self.Ch[ii].BaseStd[self.Cut])),0), 
+                                    width=2*np.std(self.Ch[ii].BaseStd[self.Cut])/np.sqrt(len(self.Ch[ii].BaseStd[self.Cut])), 
                                     height=10000, 
                                     fc=Plt.colors[ii],
                                     ec=Plt.colors[ii], 
@@ -168,7 +169,7 @@ class Dataset:
         YMax = np.max([np.max(self.Ch[ii].DriftTime) for ii in range(self.NumChannels)])
         YMax = self.RoundUpToNext(YMax, 10)
         YTicks = self.RoundDownToNext(YMax/5, 1)
-        self.DriftTime = self.Ch[0].GradTime - self.Ch[1].GradTime
+        self.DriftTime = self.Ch[0].DriftTime - self.Ch[1].DriftTime
         DriftCut = np.where(self.DriftTime > 0)
         Plt.PltTime(Time=self.Ch[0].TimeStamp[DriftCut],
                     Data=[self.Ch[0].DriftTime[DriftCut], self.Ch[1].DriftTime[DriftCut], self.Ch[0].DriftTime[DriftCut] - self.Ch[1].DriftTime[DriftCut]],
