@@ -186,9 +186,13 @@ class WFM:
                 ThresholdVal = (1-Threshold+0.05) * self.Max[ii]
             elif self.Pol == -1: 
                 ThresholdVal = Threshold * self.Max[ii]
+            # BinsOverThreshold = np.where(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii])] > ThresholdVal )[0][0]
             try:
-                BinsOverThreshold = np.where(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii])] > ThresholdVal )[0][0]
-            except IndexError as error:
+                BinsOverThreshold = np.where(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii]+1)] > ThresholdVal )[0][0]
+            except:
+                # print(data[self.FindTimeBin(0):self.FindTimeBin(self.MaxT[ii])])
+                # print(ThresholdVal)
+                # BinsOverThreshold = np.where(self.Time==self.FindTimeBin(self.MaxT[ii]))[0][0]
                 pass
                 # print(data[self.FindTimeBin(7):self.FindTimeBin(self.MaxT[ii])], ThresholdVal)
             self.DriftTime.append(self.Time[self.FindTimeBin(0)+BinsOverThreshold])

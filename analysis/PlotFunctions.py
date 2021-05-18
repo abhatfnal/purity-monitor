@@ -36,7 +36,9 @@ def PltTime(Time,Data,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,SaveName=
         plt.ylim(0, maxY*1.2)
     
     for ii, yy in enumerate(Data):
-        plt.plot(Time, yy, 'o', label=Legend[ii], color=colors[ii], marker='o', mew=0.01, markersize=4)
+        window = 10
+        plt.plot(Time[(window-1):], np.convolve(yy, np.ones(window), 'valid') / window, label=Legend[ii], color=colors[ii], mew=0.01, markersize=4)
+        plt.plot(Time, yy, 'o', color=colors[ii], marker='o', mew=0.01, markersize=2, alpha=0.5)
     plt.legend(loc='lower left',bbox_to_anchor=(0.005,0.92), ncol=3, borderaxespad=0)
     plt.title(Title)
     fig.tight_layout()
@@ -46,7 +48,7 @@ def PltTime(Time,Data,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,SaveName=
 def PltChargeVsTime(Time,Data,CC,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=0,Title=''):
     fig,ax = plt.subplots()
 
-    window = 20
+    window = 10
     
     ax.grid(b=True, which='major', color='k', linestyle='--', alpha=0.5)
     ax.grid(b=True, which='minor', color='k', linestyle=':', alpha=0.5)
@@ -66,10 +68,10 @@ def PltChargeVsTime(Time,Data,CC,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=
         plt.ylim(0, maxY*1.2)
     
     for ii, yy in enumerate(Data):
-        plt.plot(Time, yy, 'o', label=Legend[ii], color=colors[ii], marker='o', mew=0.01, markersize=3)
-        # plt.plot(Time[:-(window-1)], np.convolve(yy, np.ones(window), 'valid') / window, label=Legend[ii], color=colors[ii], mew=0.01, markersize=4)
+        plt.plot(Time, yy, 'o', color=colors[ii], marker='o', mew=0.01, markersize=2, alpha=0.8)
+        plt.plot(Time[(window-1):], np.convolve(yy, np.ones(window), 'valid') / window, label=Legend[ii], color=colors[ii], mew=0.01, markersize=4)
     
-    plt.legend(loc='upper left', bbox_to_anchor=(0.01,0.99), ncol=1, borderaxespad=0)
+    
     plt.title(Title)
 
     ax2 = ax.twinx()
@@ -84,11 +86,16 @@ def PltChargeVsTime(Time,Data,CC,Legend,Label,XRange=0,YRange=0,XTicks=0,YTicks=
     plt.ylabel('Charge Collection [\%]')
     ax2.yaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(5))
     ax2.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(20))
-    plt.plot(Time, CC, 'o', label=Legend[2], color=colors[2], marker='o', mew=0.01, markersize=4)
+    plt.plot(Time, CC, 'o', color=colors[2], marker='o', mew=0.01, markersize=2, alpha=0.8)
     
     run_av = np.convolve(CC, np.ones(window), 'valid') / window
-    # plt.plot(Time[:-(window-1)], run_av, label=Legend[2], color=colors[2], mew=0.01, markersize=4)
-    plt.legend(loc='upper right',bbox_to_anchor=(0.99,0.99), ncol=1, borderaxespad=0)
+    plt.plot(Time[(window-1):], run_av, label=Legend[2], color=colors[2], mew=0.01, markersize=4, zorder=0)
+
+    leg = ax.legend(loc='upper left', bbox_to_anchor=(0.01,0.99), ncol=1, borderaxespad=0, framealpha=1.0)
+    leg = ax.get_legend()
+    leg.remove()
+    ax2.add_artist(leg)
+    ax2.legend(loc='upper right',bbox_to_anchor=(0.99,0.99), ncol=1, borderaxespad=0, framealpha=1.0).set_zorder(10)
 
 def PltScatter(xvalue, yvalue, legend, xlabel, ylabel, scale=1.2, xlim=1, xlim2=1, ylim=1, ylim2=1, save=False):
     fig = plt.figure(figsize=(6,5))

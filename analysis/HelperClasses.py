@@ -53,15 +53,15 @@ class Dataset:
         self.Ch = self.InitializeChannels(self.NumChannels, self.Pol)
         self.Files = glob.glob(self.Path+self.Selection)
 
-    def RunStandardAnalysis(self): 
+    def RunStandardAnalysis(self, NoiseDataset=None): 
         # self.Files = self.ChooseFilesToAnalyze(self.Path)
         for File in self.Files: 
             self.ImportDataFromHDF5(File, self.Ch)
-        self.DoAnalysis(self.Ch)
+        self.DoAnalysis(self.Ch, NoiseDataset=NoiseDataset)
         self.ChargeCollection = self.Ch[0].Max / self.Ch[1].Max
         self.DiffMinute = int((np.max(self.Ch[0].TimeStamp) - np.min(self.Ch[0].TimeStamp)).seconds/60.0 + 0.5)
         self.XTicks = int((self.DiffMinute/12.0 + 0.5))+1
-        self.NoiseCut = 50
+        self.NoiseCut = 1000
         self.Cut = np.where(self.Ch[0].BaseStd < self.NoiseCut)
         self.InverseCut = np.where(self.Ch[0].BaseStd > self.NoiseCut)
 
@@ -88,20 +88,27 @@ class Dataset:
                 ch.TimeStamp.append(datetime.datetime.strptime((f.attrs['Date']+Group.get(key).attrs["TimeStamp"]).decode('utf-8'), '%Y%m%d%H%M%S'))
             
 
-    def DoAnalysis(self, channels):
+    def DoAnalysis(self, channels, NoiseDataset=None):
     ###### Basic analysis: baseline subtraction, waveform averaging, obtaining fourier spectra, frequency bandpass filter and finding extrema.
         Print = False 
         for ii, ch in enumerate(channels):
             print(" | Processing data in channel %d..." % (ch.ID))
             ch.GetSampling()
+            ch.Amp = [x for _, x in sorted(zip(ch.TimeStamp, ch.Amp))]
             ch.Amp = np.array(ch.Amp)
-            ch.TimeStamp = np.array(ch.TimeStamp)
+            ch.TimeStamp = np.array(sorted(ch.TimeStamp))
+
+            # ch.TimeStamp = np.array(ch.TimeStamp)
             ch.Amp = ch.SubtractBaseline(Data=ch.Amp, state=Print)
             ch.Amp = ch.RemoveNoise(Data=ch.Amp, HighPass=100000, state=Print)
+            if NoiseDataset is not None:
+                for jj,amp in enumerate(ch.Amp):
+                    ch.Amp[jj] =  ch.Amp[jj]-np.mean(NoiseDataset.Ch[ii].Amp,axis=0)
+
             # ch.RunFit(Data=ch.Amp)
             ch.GetAllMaxima(Data=ch.Amp, state=Print)
             # ch.FindMaxGradient(Data=ch.Amp ,state=Print)
-            # ch.GetDriftTime(Data=ch.Amp, Threshold=0.1)
+            ch.GetDriftTime(Data=ch.Amp, Threshold=0.1)
             # ch.GetIntegral(Data=ch.Amp, state=Print)
             # ch.GetBaselineNoise(Data=ch.Amp)
 
