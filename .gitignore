@@ -1,3 +1,7 @@
 *.pdf
 *.png
 *.tex
+*.pyc
+*-checkpoint.ipynb
+settings.json
+Background.py
