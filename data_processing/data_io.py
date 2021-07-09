@@ -19,7 +19,7 @@ class DataIO:
             os.makedirs(self.ZipDir)
             with zipfile.ZipFile(File, 'r') as zip_ref:
                 zip_ref.extractall(self.ZipDir)
-        self.RGAFiles = glob.glob(self.ZipDir+'/RGA/*.txt')
+        self.RGAFiles = glob.glob(self.ZipDir+'/*.txt')
     
     def RemoveZipDir(self):
         for File in self.RGAFiles:
