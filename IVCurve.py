@@ -47,4 +47,14 @@ class IVCurve:
     
     def format_timestamp(self, Format='datetime', Ref=dt.datetime(2021,11,9,0,0)):
         if Format == 'datetime':
-            pass
+            self.Datetime = []
+            date = self.Path.split('/')[-2]
+            year = int(date[:4])
+            month = int(date[4:6])
+            day = int(date[-2:])
+            for x in self.TimeStamp:
+                tt = int(x.split('.')[0])
+                hour = int(tt/3600.0)
+                minute = int((tt-hour*3600)/60)
+                second = tt - hour*3600 - minute*60 
+                self.Datetime.append(dt.datetime(year,month,day,hour,minute,second))
