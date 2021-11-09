@@ -65,7 +65,7 @@ class Dataset:
 
             # ch.TimeStamp = np.array(ch.TimeStamp)
             ch.Amp = ch.SubtractBaseline(Data=ch.Amp, state=Print)
-            ch.Amp = ch.RemoveNoise(Data=ch.Amp, HighPass=200000, state=Print)
+            ch.Amp = ch.RemoveNoise(Data=ch.Amp, HighPass=80000, state=Print)
             if NoiseDataset is not None:
                 for jj,amp in enumerate(ch.Amp):
                     ch.Amp[jj] =  ch.Amp[jj]-np.mean(NoiseDataset.Ch[ii].Amp,axis=0)

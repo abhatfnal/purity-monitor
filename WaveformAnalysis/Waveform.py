@@ -127,7 +127,7 @@ class Waveform:
             self.Integral.append(np.sum(Data[i][self.FindTimeBin(0):self.FindTimeBin(200)])/1.0)
         self.Integral = np.array(self.Integral)
         
-    def GetAllMaxima(self, Data, state=False):
+    def GetAllMaxima(self, Data, Time=150, state=False):
         self.Max = []
         self.MaxT = []
         if(state): print(" | Getting extrema of individual files...")
