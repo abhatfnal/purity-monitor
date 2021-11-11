@@ -24,15 +24,15 @@ def GetPartialPressure(data, Dict):
     GXeDensity = 0.005761 # g/ml
     XeDensityRatio = LXeDensity/GXeDensity
     CellVolumeRatio = 0.8/2.3 
-    print " | Leak Rate:   ", LeakRate, "mbar L/min"
-    print " | Printing concentration of gases..."
-    print " | ", 'M [u]', '\t', 'P [mbar]', '\t', 'Conc [%]', '\t', 'ppb', '\t\t', 'Name'
+    print(" | Leak Rate:   ", LeakRate, "mbar L/min")
+    print(" | Printing concentration of gases...")
+    print(" | ", 'M [u]', '\t', 'P [mbar]', '\t', 'Conc [%]', '\t', 'ppb', '\t\t', 'Name')
     for ii,x in enumerate(Dict.keys()):
         Dict[x]['PumpSpeed'] = Dict[x]['PumpSpeed']*60 #convert to min
         y = data[ii]*Dict[x]['PumpSpeed']
         y = y/LeakRate/(XeDensityRatio*CellVolumeRatio)
         y2 = y*Dict[x]['Mass']/136.0*1e9
-        print " | ", Dict[x]['Mass'], '\t', '%.2E'%Decimal(data[ii]), '\t', '%.2E'%Decimal(y), '\t', '%.2E'%Decimal(y2), '\t', x
+        print(" | ", Dict[x]['Mass'], '\t', '%.2E'%Decimal(data[ii]), '\t', '%.2E'%Decimal(y), '\t', '%.2E'%Decimal(y2), '\t', x)
 
 def GetDictionary():
     #Pump speed is based on https://shop.edwardsvacuum.com/Viewers/Document.ashx?id=2129&lcid=2057
@@ -121,7 +121,7 @@ if __name__ == '__main__':
         pressure = []
         ppressure = []
         
-        print " | Analyzing file:   ", x 
+        print(" | Analyzing file:   ", x)
         file = open(x, "r")
         path, filename = os.path.split(x)
         # print filename[-15:-7]
