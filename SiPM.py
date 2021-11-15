@@ -4,15 +4,21 @@ import h5py
 
 from scipy.signal import butter, lfilter, freqz, filtfilt
 from scipy.special import erfc
+from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
 
 from WaveformAnalysis import Dataset
-
 
 class SiPM(Dataset.Dataset):
     def __init__(self, Path, Selection='*'):
         self.Path = Path
         self.Selection = Selection
         self.Files = glob.glob(self.Path+self.Selection)
+        self.fit_parameters = []
+        self.fit_covariance = []
+        self.peak_pos = []
+        self.peak_height = []
+        self.max = []
 
     def get_filtered_waveform(self, time, amp, lowfreq=1, highfreq=10000, order=6, type='low'):
         fs = 1/(np.mean(np.diff(time))/self.Ch[0].TScale)
@@ -34,5 +40,23 @@ class SiPM(Dataset.Dataset):
         y = lfilter(b, a, data)
         return y
     
-    def func(x,V0,sigma,tau,mu):
-        return V0 * np.exp(0.5 * (sigma/tau)**2 - (x-mu)/tau) * erfc(1/np.sqrt(2) * (sigma/tau - (x-mu)/sigma))
+    def fit_peaks(self, time, data):
+        peaks,pdict = find_peaks(data, height=50, width=20, distance=50)
+        self.peak_pos.append(peaks)
+        self.peak_height.append(pdict['peak_heights'])
+        
+        for ii,p in enumerate(peaks): 
+            pp = time[p]
+            ph = pdict['peak_heights'][ii]
+            fit = np.where((time>time[p]-50) & (time<time[p]+50))
+            try:
+                popt, pcov = curve_fit(self.func, time[fit], data[fit], p0=[0, ph, 1, 40, pp], maxfev=10000)
+                self.fit_parameters.append(popt)
+                self.fit_covariance.append(pcov)
+                self.max.append( np.max(self.func(time[fit], *popt)) )
+            except:
+                self.fit_parameters.append([0,0,0,0,0])
+                self.fit_covariance.append([])
+    
+    def func(self,x,base,V0,sigma,tau,mu):
+        return base + V0/2 * np.exp(0.5 * (sigma/tau)**2 - (x-mu)/tau) * erfc(1/np.sqrt(2) * (sigma/tau - (x-mu)/sigma))
