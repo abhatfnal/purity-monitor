@@ -50,7 +50,7 @@ class SiPM(Dataset.Dataset):
             ph = pdict['peak_heights'][ii]
             fit = np.where((time>time[p]-50) & (time<time[p]+50))
             try:
-                popt, pcov = curve_fit(self.func, time[fit], data[fit], p0=[0, ph, 1, 40, pp], maxfev=10000)
+                popt, pcov = curve_fit(self.func, time[fit], data[fit], p0=[0.0, ph, 1.0, 40.0, pp], maxfev=10000)
                 self.fit_parameters.append(popt)
                 self.fit_covariance.append(pcov)
                 self.max.append( np.max(self.func(time[fit], *popt)) )
@@ -59,4 +59,4 @@ class SiPM(Dataset.Dataset):
                 self.fit_covariance.append([])
     
     def func(self,x,base,V0,sigma,tau,mu):
-        return base + V0/2 * np.exp(0.5 * (sigma/tau)**2 - (x-mu)/tau) * erfc(1/np.sqrt(2) * (sigma/tau - (x-mu)/sigma))
+        return base + V0/2.0 * np.exp(0.5 * (sigma/tau)**2 - (x-mu)/tau) * erfc(1.0/np.sqrt(2.0) * (sigma/tau - (x-mu)/sigma))
