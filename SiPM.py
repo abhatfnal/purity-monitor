@@ -37,11 +37,11 @@ class SiPM(Dataset.Dataset):
     def butter_filter(self, data, fs, lowfreq, highfreq, order=6, type='low'):
         nyq = 0.5 * fs
         b, a = butter(order, [lowfreq/nyq, highfreq/nyq], btype=type, analog=False)
-        y = lfilter(b, a, data)
+        y = filtfilt(b, a, data)
         return y
     
     def fit_peaks(self, time, data):
-        peaks,pdict = find_peaks(data, height=50, width=20, distance=50)
+        peaks,pdict = find_peaks(data, height=20, width=20, distance=50)
         self.peak_pos.append(peaks)
         self.peak_height.append(pdict['peak_heights'])
         
