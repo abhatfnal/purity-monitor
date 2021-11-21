@@ -19,8 +19,9 @@ class SiPM(Dataset.Dataset):
         self.peak_pos = []
         self.peak_height = []
         self.max = []
+        self.deconv_filter = None
 
-    def get_filtered_waveform(self, time, amp, lowfreq=1, highfreq=10000, order=6, type='low'):
+    def get_filtered_waveform(self, time, amp, lowfreq=100, highfreq=100000, order=3, type='band'):
         fs = 1/(np.mean(np.diff(time))/self.Ch[0].TScale)
         return self.butter_filter(amp, fs, lowfreq, highfreq, order=order, type=type)
 
@@ -34,7 +35,7 @@ class SiPM(Dataset.Dataset):
         max_pos_cut = np.where(Amp[cut] == np.max(Amp[cut]))[0][0]
         max_pos = D0.Ch[1].Time[cut][max_pos_cut]
 
-    def butter_filter(self, data, fs, lowfreq, highfreq, order=6, type='low'):
+    def butter_filter(self, data, fs, lowfreq, highfreq, order=6, type='band'):
         nyq = 0.5 * fs
         b, a = butter(order, [lowfreq/nyq, highfreq/nyq], btype=type, analog=False)
         y = filtfilt(b, a, data)
@@ -60,3 +61,63 @@ class SiPM(Dataset.Dataset):
     
     def func(self,x,base,V0,sigma,tau,mu):
         return base + V0/2.0 * np.exp(0.5 * (sigma/tau)**2 - (x-mu)/tau) * erfc(1.0/np.sqrt(2.0) * (sigma/tau - (x-mu)/sigma))
+    
+    def gauss_conv(self, x, mu=0, sigma=0.1):
+        x = x-mu
+        return np.exp(-np.square((x-mu)/sigma)/2)/(sigma*np.sqrt(2*np.pi))
+    
+    def get_sampling(self):
+        self.start = self.Ch[0].Time[0]
+        self.length = self.Ch[0].Time[-1] - self.Ch[0].Time[0]
+
+    def get_convolution_filter(self):
+        xdata = self.Ch[0].Time
+        desire_x = np.arange(self.start,self.start+self.length, xdata[1]-xdata[0])
+        desire_x = np.arange(-500,500, xdata[1]-xdata[0])
+        desire_y = self.gauss_conv(desire_x)
+        resp_x = np.arange(0,1000, xdata[1]-xdata[0])
+        resp_y = self.func(resp_x, 0, 1, 1.83, 46.93, 0)
+        resp_f = np.fft.fft(resp_y)
+        desire_f = np.fft.fft(desire_y)
+        filter_f = desire_f/resp_f
+        filter_y = np.real(np.fft.ifft(filter_f))
+        return filter_y
+    
+    def get_deconvolved_waveform(self, data):
+        if self.deconv_filter is None:
+            print('Getting deconvolution filter...')
+            self.deconv_filter = self.get_convolution_filter()
+        return np.convolve(data, self.deconv_filter, 'same')  
+
+    def run_filter(self, data, lowfreq=100.0, highfreq=100000.0, type='band', order=3):  
+        x_filt = [] 
+        for x in data:
+            x_filt.append(self.get_filtered_waveform(self.Ch[0].Time, x, lowfreq, highfreq, order, type))
+        return np.array(x_filt)
+    
+    def run_deconvolution(self, data, window=1000):
+        x_deconv = []
+        # count = int(self.length/window)
+        for i,x in enumerate(data):
+            # for j in range(count):
+            #     print(i,j)
+            #     x_cut = x[window*j:window*(j+1)]
+            x_deconv.append(self.get_deconvolved_waveform(x))
+        return np.array(x_deconv)
+    
+    def get_peaks(self, data, height=20, distance=1):
+        if self.peak_height:
+            pass
+        else:
+            self.peak_height = []
+            self.peak_pos = []
+        for x in data:
+            peaks,pdict = find_peaks(x, height=height, distance=distance)
+
+            if len(peaks)>0:
+                self.peak_height.extend(pdict['peak_heights'])
+                self.peak_pos.extend(self.Ch[0].Time[peaks])
+    
+    def clear(self):
+        self.Ch[0].Amp = []
+        self.Ch[0].Deconv = []

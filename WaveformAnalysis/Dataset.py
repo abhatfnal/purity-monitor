@@ -51,6 +51,7 @@ class Dataset:
             for key in GroupKeys:
                 ch.Amp.append(np.array(Group.get(key)).flatten() * ch.VScale * ch.Pol)
                 ch.TimeStamp.append(datetime.datetime.strptime((f.attrs['Date']+Group.get(key).attrs["TimeStamp"]).decode('utf-8'), '%Y%m%d%H%M%S'))
+        f.close()
             
 
     def DoAnalysis(self, channels, NoiseDataset=None):
