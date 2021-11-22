@@ -111,12 +111,23 @@ class SiPM(Dataset.Dataset):
         else:
             self.peak_height = []
             self.peak_pos = []
+            self.peak_num = []
+            self.peak_wvf_num = []
+            self.wvf_num = 0
         for x in data:
             peaks,pdict = find_peaks(x, height=height, distance=distance)
 
             if len(peaks)>0:
                 self.peak_height.extend(pdict['peak_heights'])
                 self.peak_pos.extend(self.Ch[0].Time[peaks])
+                self.peak_num.extend([len(peaks)])
+                self.peak_wvf_num.extend([self.wvf_num]*len(peaks))
+            else:
+                self.peak_height.extend([-99999.99])
+                self.peak_pos.extend([-99999.99])
+                self.peak_num.extend([0])
+                self.peak_wvf_num.extend([self.wvf_num])
+        self.wvf_num += 1
     
     def clear(self):
         self.Ch[0].Amp = []
