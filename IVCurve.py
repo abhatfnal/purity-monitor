@@ -39,7 +39,6 @@ class IVCurve:
         self.AvgVoltage = []
         self.AvgCurrent = []
         self.AvgTimestamp = []
-#         self.TimeInterval=[]
         for x in range(len(self.Current)):
             ii = x*Size
             if ii >= len(self.Current):
@@ -47,11 +46,9 @@ class IVCurve:
             voltage = np.mean(self.Voltage[ii:ii+Size], axis=0)
             current = np.median(self.Current[ii:ii+Size], axis=0)
             timestamp = np.mean([float(x) for x in self.Timestamp[ii:ii+Size]])
-#             timeinterval=np.array([[self.Timestamp[ii]],[self.Timestamp[ii+Size]]])
             self.AvgVoltage.append(voltage)
             self.AvgCurrent.append(current)
             self.AvgTimestamp.append(timestamp)
-#             self.TimeInterval.append(timeinterval)
     
     def format_timestamp(self, Format='datetime', Ref=dt.datetime(2021,11,9,0,0)):
         if Format == 'datetime':
