@@ -7,3 +7,4 @@ default*
 *-checkpoint.ipynb
 settings.json
 Background.py
+*.out
