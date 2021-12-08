@@ -42,7 +42,7 @@ class SiPM(Dataset.Dataset):
         return y
     
     def fit_peaks(self, time, data):
-        peaks,pdict = find_peaks(data, height=20, width=20, distance=50)
+        peaks,pdict = find_peaks(data, height=35, width=20, distance=50)
         self.peak_pos.append(peaks)
         self.peak_height.append(pdict['peak_heights'])
         
@@ -105,7 +105,7 @@ class SiPM(Dataset.Dataset):
             x_deconv.append(self.get_deconvolved_waveform(x))
         return np.array(x_deconv)
     
-    def get_peaks(self, data, height=20, distance=1):
+    def get_peaks(self, data, height=35, distance=1):
         if self.peak_height:
             pass
         else:
@@ -132,3 +132,4 @@ class SiPM(Dataset.Dataset):
     def clear(self):
         self.Ch[0].Amp = []
         self.Ch[0].Deconv = []
+        self.Ch[0].Peak_height=[]
