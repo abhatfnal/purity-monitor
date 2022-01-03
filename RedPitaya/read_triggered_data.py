@@ -7,9 +7,9 @@ import struct
 import numpy as np
 import h5py
 
-rp_s = scpi.scpi('169.254.39.61')
+rp_s = scpi.scpi('169.254.84.97')
 
-def acquire_file(num_traces=1000, dec_fac=1, trig_lev_mv=25):
+def acquire_file(num_traces=1000, dec_fac=2, trig_lev_mv=25):
     
     #num_traces = 100 #number of traces to record
     #dec_fac = 1 # decimation factor (see https://redpitaya.readthedocs.io/en/latest/appsFeatures/examples/acqRF-samp-and-dec.html)
@@ -53,9 +53,20 @@ def acquire_file(num_traces=1000, dec_fac=1, trig_lev_mv=25):
     
     return np.array(ch1_dat), np.array(ch2_dat)
 
-cd1, cd2 = acquire_file()
-f = h5py.File("mytestfile.h5", "w")
+cd1, cd2 = acquire_file(num_traces=100)
 
-#plt.figure()
-#plt.plot(cd1.T)
-#plt.show()
+channel1=[]
+channel2=[]
+for x,y in zip(cd1.T,cd2.T):
+    channel1.append(x*2/16384)
+    channel2.append(y*2/16384)
+
+f = h5py.File("mytestfile.h5", "w")
+f.create_dataset('Ch1',data=channel2)
+f.create_dataset('Ch2',data=channel2)
+f.close()
+plt.figure()
+plt.plot(channel1,color='k')
+plt.plot(channel2,color='r')
+# plt.legend(loc='upper right')
+plt.show()
